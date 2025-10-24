@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}cargar  Desvinculaciones{% endblock %}
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/desv.css') }}">
+{% endblock %}
+{% block content %}
+
+<div class="container-fluid mt-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="m-0 fw-bold">Carga de Desvinculaciones</h3>
+    <div class="tabs">
+      <button id="tabForm" class="btn tab-btn active">
+        <i class="bi bi-person-dash"></i> carga individual
+      </button>
+      <button id="tabCSV" class="btn tab-btn">
+        <i class="bi bi-upload"></i> Carga masiva CSV
+      </button>
+    </div>
+  </div>
+
+  <div id="panelForm" class="card-section mb-3">
+    {% include "desv/_form_body.html" %}
+  </div>
+
+  <div id="panelCSV" class="card-section d-none">
+    {% include "desv/_bulk_body.html" %}
+  </div>
+</div>
+
+<script>
+  const tabForm=document.getElementById('tabForm'), tabCSV=document.getElementById('tabCSV');
+  const panelForm=document.getElementById('panelForm'), panelCSV=document.getElementById('panelCSV');
+  function setActive(which){
+    if(which==='csv'){ tabCSV.classList.add('active'); tabForm.classList.remove('active'); panelCSV.classList.remove('d-none'); panelForm.classList.add('d-none'); }
+    else{ tabForm.classList.add('active'); tabCSV.classList.remove('active'); panelForm.classList.remove('d-none'); panelCSV.classList.add('d-none'); }
+  }
+  tabForm.onclick=()=>setActive('form');
+  tabCSV.onclick=()=>setActive('csv');
+</script>
+{% endblock %}

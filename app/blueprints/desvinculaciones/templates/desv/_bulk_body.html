@@ -1,0 +1,71 @@
+{# Parcial CSV: sin extends; estilos vienen desde css/desv.css #}
+<form class="text-center" method="post" enctype="multipart/form-data"
+      action="{{ url_for('desvinculaciones.desv_bulk') }}">
+  {% if csrf_token %}<input type="hidden" name="csrf_token" value="{{ csrf_token }}">{% endif %}
+  <div class="dropzone">
+    <div class="dz-icon"><i class="bi bi-cloud-arrow-up"></i></div>
+    <p class="mb-3">Arrastra tu <strong>CSV</strong> aquí o</p>
+    <label class="btn btn-outline-light">
+      <input type="file" name="file" accept=".csv" hidden>
+      Seleccionar archivo
+    </label>
+    <div class="small text-secondary mt-2">Fechas aceptadas: <code>dd/mm/yyyy</code>, <code>dd-mm-yyyy</code> o <code>yyyy-mm-dd</code>.</div>
+    <div class="mt-2">
+      <a class="small" href="{{ url_for('desvinculaciones.desv_bulk_plantilla') }}">
+        <i class="bi bi-download"></i> Descargar plantilla CSV
+      </a>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-center">
+    <button class="btn btn-primary"><i class="bi bi-search"></i> Validar y previsualizar</button>
+  </div>
+</form>
+
+{% if result %}
+  <div class="alert {{ 'alert-success' if result.error_count==0 else 'alert-warning' }} mt-3">
+    <strong>{{ result.filename }}</strong> — válidos: {{ result.valid_count }},
+    errores: {{ result.error_count }}
+  </div>
+{% endif %}
+
+{% if errors and errors|length %}
+  <div class="card card-body border-danger mt-3">
+    <h6 class="text-danger mb-2"><i class="bi bi-exclamation-triangle"></i> Errores</h6>
+    <ul class="mb-0">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  </div>
+{% endif %}
+
+{% if preview and preview|length %}
+  <form class="mt-3" method="post" action="{{ url_for('desvinculaciones.desv_bulk') }}">
+    {% if csrf_token %}<input type="hidden" name="csrf_token" value="{{ csrf_token }}">{% endif %}    <input type="hidden" name="confirm" value="1">
+    <div class="card card-body">
+      <div class="d-flex justify-content-between align-items-center">
+        <h6 class="m-0">Previsualización (primeros {{ preview|length }} registros)</h6>
+        <button class="btn btn-success btn-sm"><i class="bi bi-check2-circle"></i> Confirmar inserción</button>
+      </div>
+      <div class="table-responsive mt-2">
+        <table class="table table-sm table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>RUT</th><th>Nombre</th><th>Empresa</th><th>Área</th><th>Cargo</th><th>F. Contrato</th><th>F. Término</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in preview %}
+              <tr>
+                <td class="text-mono">{{ r.RUT }}</td>
+                <td>{{ r.NOMBRE }}</td>
+                <td>{{ r.EMPRESA }}</td>
+                <td>{{ r.AREA }}</td>
+                <td>{{ r.CARGO }}</td>
+                <td>{{ r.FECHA_CTTO }}</td>
+                <td>{{ r.FECHA_TERMINO }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </form>
+{% endif %}

@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+{% block title %} Graficos Presentismo{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+  <!-- Título + filtros -->
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+    <div>
+      <h4 class="page-title mb-0">Presentismo</h4>
+      <div class="text-secondary small">
+        Rango: {{ filtros.desde or '—' }} → {{ filtros.hasta or '—' }}
+      </div>
+
+      {% if rid %}
+      <div class="mt-2">
+        <span class="badge rounded-pill text-bg-dark" style="background:#0c1728;border:1px solid var(--line);">
+          Filtro: {{ rid_name or ('OBRA ' ~ rid) }}
+        </span>
+        <a href="{{ url_for('dashboard.presentismo', desde=filtros.desde, hasta=filtros.hasta) }}"
+           class="btn btn-outline-light btn-sm ms-2">Quitar filtro</a>
+      </div>
+      {% endif %}
+    </div>
+
+    <form class="row g-2" method="get">
+      <div class="col-auto">
+        <label class="form-label mb-0 small text-secondary">Desde</label>
+        <input name="desde" type="date" class="form-control form-control-sm" value="{{ filtros.desde or '' }}">
+      </div>
+      <div class="col-auto">
+        <label class="form-label mb-0 small text-secondary">Hasta</label>
+        <input name="hasta" type="date" class="form-control form-control-sm" value="{{ filtros.hasta or '' }}">
+      </div>
+      {% if rid %}
+        <input type="hidden" name="rid" value="{{ rid }}">
+      {% endif %}
+      <div class="col-auto align-self-end">
+        <button class="btn btn-primary btn-sm pill">Aplicar</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- KPIs -->
+  <div class="row g-3 mb-2">
+    <div class="col-md-3 col-sm-6">
+      <div class="kpi h-100">
+        <small>Asistencia mensual</small>
+        <div class="fs-3 fw-bold mt-1">{{ (donut_mes.pct or 0)|round(2) }}%</div>
+        <div class="small text-secondary mt-1">
+          {{ donut_mes.presentes }} presentes • {{ donut_mes.ausentes }} ausentes
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+      <div class="kpi h-100">
+        <small>Asistencia semanal</small>
+        <div class="fs-3 fw-bold mt-1">{{ (donut_sem.pct or 0)|round(2) }}%</div>
+        <div class="small text-secondary mt-1">
+          {{ donut_sem.presentes }} presentes • {{ donut_sem.ausentes }} ausentes
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gráficos -->
+  <div class="row g-3">
+
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="p-3 pb-0">
+          <h6 class="mb-0">Distribución mensual</h6>
+          <div class="text-secondary small">Presentes vs ausentes</div>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap"><canvas id="donutMes"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="p-3 pb-0">
+          <h6 class="mb-0">Distribución semanal</h6>
+          <div class="text-secondary small">Presentes vs ausentes</div>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap"><canvas id="donutSem"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barras por recinto -->
+    <div class="col-12">
+      <div class="card">
+        <div class="p-3 pb-0">
+          <h6 class="mb-0">
+            {% if rid %} Presentes vs Ausentes — {{ rid_name or ('OBRA ' ~ rid) }}
+            {% else %} Presentes vs Ausentes por recinto
+            {% endif %}
+          </h6>
+          <div class="text-secondary small">
+            ({{ filtros.desde or '—' }} → {{ filtros.hasta or '—' }})
+            {% if not rid %} — <em>clic para filtrar</em>{% endif %}
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap-lg"><canvas id="barRecintos"></canvas></div>
+          {% if not recintos or recintos|length == 0 %}
+            <div class="alert alert-warning mt-3 mb-0">No hay datos para el rango seleccionado.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Barras por mes -->
+    <div class="col-12">
+      <div class="card">
+        <div class="p-3 pb-0">
+          {% set _anio = (filtros.hasta[:4] if filtros.hasta and filtros.hasta|length >= 4 else '') %}
+          <h6 class="mb-0">Presentes / Ausentes por mes {{ _anio }}</h6>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap"><canvas id="barMeses"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+  // ===== Datos (defaults seguros) =====
+  const DONUT_MES_P = {{ (donut_mes.presentes | default(0, true)) | int }};
+  const DONUT_MES_A = {{ (donut_mes.ausentes  | default(0, true)) | int }};
+  const DONUT_SEM_P = {{ (donut_sem.presentes | default(0, true)) | int }};
+  const DONUT_SEM_A = {{ (donut_sem.ausentes  | default(0, true)) | int }};
+  const RECINTOS    = {{ recintos | tojson }};
+  const MESES       = {{ meses    | tojson }};
+  const RID_ACTUAL  = {{ rid or 'null' }};
+
+  // ===== Colores desde tu CSS =====
+  const css   = getComputedStyle(document.documentElement);
+  const cBlue1= css.getPropertyValue('--blue-1').trim() || '#214ccf';
+  const cBlue2= css.getPropertyValue('--blue-2').trim() || '#1b3ea8';
+  const cRed  = css.getPropertyValue('--red-1').trim()  || '#b83232';
+  const cText = css.getPropertyValue('--text-1').trim() || '#e9f1ff';
+  const cLine = css.getPropertyValue('--line').trim()   || '#1e2b45';
+  const gridColor = cLine;
+
+  Chart.defaults.color = cText;
+  Chart.defaults.plugins.legend.labels.usePointStyle = true;
+  Chart.defaults.font.family = 'Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial';
+
+  // Helper % para tooltips
+  function pct(value, arr){
+    const total = (arr || []).reduce((a,b) => a + Number(b||0), 0);
+    return total ? Math.round((value/total)*10000)/100 : 0;
+  }
+
+  // ===== Donut mensual =====
+  new Chart(document.getElementById('donutMes'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Presentes','Ausentes'],
+      datasets: [{
+        data: [DONUT_MES_P, DONUT_MES_A],
+        backgroundColor: [cBlue1, cRed],
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      cutout: '68%',
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const arr = ctx.dataset.data;
+              return `${ctx.label}: ${ctx.parsed} (${pct(ctx.parsed, arr)}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // ===== Donut semanal =====
+  new Chart(document.getElementById('donutSem'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Presentes','Ausentes'],
+      datasets: [{
+        data: [DONUT_SEM_P, DONUT_SEM_A],
+        backgroundColor: [cBlue2, cRed],
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      cutout: '68%',
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const arr = ctx.dataset.data;
+              return `${ctx.label}: ${ctx.parsed} (${pct(ctx.parsed, arr)}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // ===== Barras por recinto =====
+  const barRecCtx = document.getElementById('barRecintos');
+  const barRecChart = new Chart(barRecCtx, {
+    type: 'bar',
+    data: {
+      labels: RECINTOS.map(r => r.recinto),
+      datasets: [
+        { label: 'Presentes', data: RECINTOS.map(r => r.presentes), backgroundColor: RECINTOS.map(r => tint(r, 'pres')) },
+        { label: 'Ausentes',  data: RECINTOS.map(r => r.ausentes),  backgroundColor: RECINTOS.map(r => tint(r, 'aus'))  }
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      scales: {
+        x: { beginAtZero: true, grid: { color: gridColor } },
+        y: { grid: { color: gridColor } }
+      },
+      plugins: { legend: { position: 'bottom' } },
+      {% if not rid %}
+      // cross-filter solo cuando NO hay filtro activo
+      onClick: (evt, elements) => {
+        const pts = barRecChart.getElementsAtEventForMode(evt, 'nearest', {intersect:true}, true);
+        if (!pts.length) return;
+        const idx = pts[0].index;
+        const selectedRid = RECINTOS[idx].rid;
+
+        const url = new URL(window.location.href);
+        url.searchParams.set('rid', selectedRid);
+        // asegura mantener los filtros de fecha actuales
+        if (!url.searchParams.get('desde')) url.searchParams.set('desde', '{{ filtros.desde }}');
+        if (!url.searchParams.get('hasta')) url.searchParams.set('hasta', '{{ filtros.hasta }}');
+        window.location.href = url.toString();
+      }
+      {% endif %}
+    }
+  });
+
+  // Resalta el recinto seleccionado con un pequeño “tint”
+  function tint(r, tipo){
+    const base = (tipo === 'pres') ? cBlue1 : cRed;
+    if (RID_ACTUAL === null) return base;
+    return (r.rid === RID_ACTUAL) ? shade(base, 0.25) : base;
+  }
+  function shade(hex, amt=0.2){
+    try{
+      const c = hex.replace('#','');
+      const num = parseInt(c,16);
+      let r=(num>>16)+Math.round(255*amt);
+      let g=((num>>8)&0x00FF)+Math.round(255*amt);
+      let b=(num&0x0000FF)+Math.round(255*amt);
+      r=Math.max(0,Math.min(255,r)); g=Math.max(0,Math.min(255,g)); b=Math.max(0,Math.min(255,b));
+      return '#' + (b | (g << 8) | (r << 16)).toString(16).padStart(6,'0');
+    }catch(e){ return hex; }
+  }
+
+  // ===== Barras por mes =====
+  new Chart(document.getElementById('barMeses'), {
+    type: 'bar',
+    data: {
+      labels: MESES.map(m => m.mes),
+      datasets: [
+        { label: 'Presentes', data: MESES.map(m => m.presentes), backgroundColor: cBlue2 },
+        { label: 'Ausentes',  data: MESES.map(m => m.ausentes),  backgroundColor: cRed   }
+      ]
+    },
+    options: {
+      responsive: true,
+      scales: { y: { beginAtZero: true, grid: { color: gridColor } }, x: { grid: { color: gridColor } } },
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+</script>
+{% endblock %}

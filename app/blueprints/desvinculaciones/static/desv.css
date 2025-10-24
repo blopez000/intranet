@@ -1,0 +1,99 @@
+/* ===== Contenedor general y cards ===== */
+.gcm-wrapper{
+  background:#0b121b;color:#e5eaf1;padding:1rem 1.25rem;border-radius:12px;
+  box-shadow:0 0 20px rgba(0,0,0,.25)
+}
+.gcm-card{background:#0d1621;border:1px solid #1f2b3a;border-radius:10px}
+
+/* ===== Barra superior: TODO en una fila ===== */
+.gcm-toolbar{background:#111b27;padding:1rem;border-radius:10px;margin-bottom:1rem}
+
+/* Grid con 7 “celdas”: Desde | Hasta | Área | Mostrar | Buscar | Exportar | Resumen */
+.gcm-filter-grid{
+  display:grid;
+  grid-template-columns: minmax(220px,1fr) minmax(220px,1fr) minmax(260px,1.2fr)
+                         minmax(120px,0.6fr) auto auto 1fr;
+  gap:.9rem 1rem;
+  align-items:end; /* alinea la base de todo */
+}
+
+/* Grupos y labels */
+.filter-group{display:flex;flex-direction:column}
+.filter-group.compact select{min-width:110px}
+.filter-group label{font-size:.8rem;color:#9ca8b8;margin-bottom:.25rem}
+
+/* Controles con el mismo alto */
+.same-h{
+  height:44px;
+  line-height:42px;
+}
+
+.filter-group input,.gcm-filter-grid select{
+  background:#1c2734;border:1px solid #2b394a;color:#e5eaf1;border-radius:6px;padding:.5rem .6rem
+}
+.filter-group input::placeholder{color:#6c7a88}
+.filter-group .form-text{margin-top:.25rem;font-size:.72rem}
+
+/* Botones como celdas del grid */
+.btn-filter{
+  display:inline-flex;align-items:center;justify-content:center;gap:.4rem;
+  padding:0 16px;white-space:nowrap
+}
+.btn-primary{
+  background:#0b5ed7;color:#fff;border:1px solid #0b5ed7;border-radius:8px;
+  font-size:.85rem;cursor:pointer
+}
+.btn-outline{
+  background:transparent;color:#cfe1ff;border:1px solid #3a4c66;border-radius:8px;
+  font-size:.85rem;text-decoration:none
+}
+.btn-outline:hover{background:#1b2a3d}
+
+/* Resumen alineado a la derecha en la misma fila */
+.gcm-summary-inline{
+  justify-self:end;align-self:center;color:#9ca8b8;font-size:.85rem;white-space:nowrap
+}
+
+/* ===== Tabla ===== */
+.gcm-table-container{overflow-x:auto;border-radius:10px;border:1px solid #1f2b3a}
+.gcm-table{width:100%;border-collapse:collapse;font-size:.85rem;min-width:1000px}
+.gcm-table thead{background:#0f1c2c;position:sticky;top:0;z-index:1}
+.gcm-table th,.gcm-table td{padding:.55rem .7rem;white-space:nowrap;border-bottom:1px solid #1c2838}
+.gcm-table tbody tr:nth-child(even){background-color:rgba(255,255,255,.02)}
+.gcm-table tbody tr:hover{background-color:rgba(0,150,255,.07)}
+.text-monospace{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+.text-secondary{color:#aeb7c4}
+.text-secondary-50{color:rgba(255,255,255,.55)}
+.text-center{text-align:center}
+.text-truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ===== Paginación ===== */
+.gcm-pagination{display:flex;justify-content:center;padding:.6rem;border-top:1px solid #1f2b3a}
+.pagination{display:flex;gap:.3rem;list-style:none;padding:0;margin:0}
+.pagination li a{
+  display:block;padding:.35rem .7rem;border-radius:8px;background:#142030;color:#b4c3d6;
+  font-size:.8rem;text-decoration:none;border:1px solid #2a3a52
+}
+.pagination li.active a{background:#0b5ed7;color:#fff;border-color:#0b5ed7}
+.pagination li.disabled a{opacity:.45;pointer-events:none}
+
+/* ===== Responsive ===== */
+@media (max-width: 1280px){
+  .gcm-filter-grid{
+    grid-template-columns: 1fr 1fr 1fr auto auto 1fr; /* une “Mostrar” con Área si falta espacio */
+  }
+}
+@media (max-width: 992px){
+  .gcm-filter-grid{
+    grid-template-columns: 1fr 1fr; /* 2 columnas */
+  }
+  .btn-filter{ width:100%; }
+  .gcm-summary-inline{ justify-self:start; margin-top:.25rem; }
+}
+@media (max-width: 600px){
+  .gcm-filter-grid{ grid-template-columns: 1fr; } /* todo apilado */
+  .gcm-wrapper{padding:.75rem}
+  .gcm-toolbar{padding:.75rem}
+  .gcm-table{font-size:.8rem}
+  .gcm-table th,.gcm-table td{padding:.45rem .55rem}
+}

@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="es" data-bs-theme="dark" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Intranet{% endblock %}</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico', v=3) }}">
+
+  <!-- CSS propio -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+
+  {% block head_extra %}{% endblock %}
+</head>
+
+<body class="gcm-body">
+  {% set authed = current_user.is_authenticated %}
+
+  <!-- Topbar si NO está autenticado -->
+  {% if not authed %}
+  <header class="gcm-topbar">
+    <div class="gcm-brand">
+      <i class="bi bi-grid-1x2-fill me-1"></i> Intranet
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <a class="btn btn-outline-light btn-sm" href="{{ url_for('auth.login') }}">
+        <i class="bi bi-box-arrow-in-right"></i> Iniciar sesión
+      </a>
+    </div>
+  </header>
+  {% endif %}
+
+  <div class="gcm-layout">
+    {% if authed %}
+    <!-- Sidebar (solo autenticado) -->
+    <aside class="gcm-sidebar">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="gcm-brand d-flex align-items-center gap-2">
+          <img src="{{ url_for('static', filename='branding/idlogistics-mark.png') }}"
+               alt="ID Logistics" height="22"
+               onerror="this.style.display='none'">
+          <span>Intranet</span>
+        </div>
+        {# Botón de cambio de tema eliminado #}
+      </div>
+
+      {# Pastilla con SOLO el nombre del usuario (o el local-part del email) #}
+      {% if current_user.is_authenticated %}
+        <div class="gcm-user-mini" title="{{ current_user.email }}">
+          <i class="bi bi-person-circle me-1"></i>
+          <span class="gcm-user-text">
+            {{ current_user.name or (current_user.email|default('')|split('@')|first) }}
+          </span>
+        </div>
+      {% endif %}
+
+      <div class="gcm-section-title">Menú</div>
+      <nav class="d-grid gap-1">
+        <a class="gcm-link {{ 'active' if request.endpoint in ['dashboard.dashboard','dashboard.index'] else '' }}"
+           href="{{ url_for('dashboard.dashboard') }}">
+          <i class="bi bi-speedometer2"></i> Dashboard Presentismo
+        </a>
+
+        <a class="gcm-link {{ 'active' if request.endpoint=='dashboard.presentismo' else '' }}"
+           href="{{ url_for('dashboard.presentismo') }}">
+          <i class="bi bi-activity"></i> Gráficos Presentismo
+        </a>
+
+        <a class="gcm-link {{ 'active' if request.endpoint=='dashboard.rotacion_filtros' else '' }}"
+           href="{{ url_for('dashboard.rotacion_filtros') }}">
+          <i class="bi bi-arrow-repeat"></i> Dashboard Rotación
+        </a>
+
+        <div class="gcm-section-title mt-3">Reportes</div>
+
+        <a class="gcm-link {{ 'active' if request.endpoint=='dashboard.reporte_horas_extras' else '' }}"
+           href="{{ url_for('dashboard.reporte_horas_extras') }}">
+          <i class="bi bi-alarm"></i> Horas extra
+        </a>
+
+        <a class="gcm-link {{ 'active' if request.endpoint=='dashboard.reporte_horas_trabajadas' else '' }}"
+           href="{{ url_for('dashboard.reporte_horas_trabajadas') }}">
+          <i class="bi bi-clock-history"></i> Horas trabajadas
+        </a>
+
+        <a class="gcm-link {{ 'active' if request.endpoint=='dashboard.reporte_inasistencias' else '' }}"
+           href="{{ url_for('dashboard.reporte_inasistencias') }}">
+          <i class="bi bi-person-exclamation"></i> Inasistencias
+        </a>
+
+        <div class="gcm-section-title mt-3">Datos</div>
+
+        <a class="gcm-link {{ 'active' if request.endpoint=='dashboard.nomina' else '' }}"
+           href="{{ url_for('dashboard.nomina') }}">
+          <i class="bi bi-people"></i> Nómina
+        </a>
+
+        <a class="gcm-link {{ 'active' if request.endpoint.startswith('desvinculaciones.') else '' }}"
+           href="{{ url_for('desvinculaciones.index') }}">
+          <i class="bi bi-clipboard-x"></i> Desvinculaciones
+        </a>
+
+        <hr class="gcm-sep">
+
+        <form id="logout-form" action="{{ url_for('auth.logout') }}" method="post" class="d-none">
+          <input type="hidden" name="csrf_token"
+                 value="{% if csrf_token is string %}{{ csrf_token }}{% else %}{{ csrf_token() }}{% endif %}">
+        </form>
+
+        <a href="#" class="gcm-link text-danger"
+           onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+          <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+        </a>
+      </nav>
+    </aside>
+    {% endif %}
+
+    <!-- Único bloque de contenido -->
+    <main class="gcm-main">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  {# Script de cambio de tema eliminado para fijar dark #}
+
+  {% block scripts %}{% endblock %}
+  {% block scripts_extra %}{% endblock %}
+</body>
+</html>

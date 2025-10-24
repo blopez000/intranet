@@ -1,0 +1,35 @@
+# Python / cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pytest_cache/
+*.mypy_cache/
+
+# Entornos virtuales
+.venv/
+env/
+venv/
+
+# Archivos sensibles
+.env.*
+*.pem
+*.key
+*.crt
+
+# IDE / Git
+.vscode/
+.idea/
+.git/
+.gitignore
+
+# Otros
+node_modules/
+dist/
+build/
+.eggs/
+*.egg-info/
+*.log
+*.db
+*.sqlite3
+tmp/

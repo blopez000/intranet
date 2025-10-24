@@ -1,0 +1,77 @@
+/* ===== Toolbar ===== */
+.report-toolbar {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) auto auto;
+  gap: .75rem;
+  align-items: end;
+  margin-bottom: .5rem;
+}
+@media (max-width: 1200px) { .report-toolbar { grid-template-columns: repeat(4, minmax(0, 1fr)) auto; } }
+@media (max-width: 992px)  { .report-toolbar { grid-template-columns: 1fr 1fr 1fr; } }
+@media (max-width: 576px)  { .report-toolbar { grid-template-columns: 1fr; } }
+.report-toolbar .form-label { margin-bottom: .35rem; font-weight: 500; color: rgba(255,255,255,.85); }
+
+.report-actions { display: flex; gap: .5rem; align-items: center; justify-content: flex-end; }
+.report-meta    { font-size: .95rem; opacity: .8; white-space: nowrap; display: flex; align-items: center; justify-content: flex-end; }
+
+/* ===== Table container ===== */
+.table-shell {
+  border-radius: .5rem;
+  background: #101b2a;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+}
+
+/* sin scroll horizontal forzado */
+.table-shell.no-hscroll { overflow-x: hidden; }
+
+/* ===== Table ===== */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #e9ecf1;
+  font-size: 0.88rem;          /* más compacto */
+  table-layout: fixed;         /* << clave para respetar colgroup y evitar scroll */
+}
+
+.table thead th {
+  background: #0e1623;
+  position: sticky; top: 0; z-index: 5;
+  text-transform: uppercase; letter-spacing: .06em;
+  font-weight: 600; color: rgba(255,255,255,.9);
+  padding: .6rem .7rem;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+/* Celdas compactas y envolventes (permitimos salto de línea) */
+.table tbody td {
+  padding: .5rem .7rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  vertical-align: middle;
+  white-space: normal;         /* << permite wraps */
+  word-break: break-word;
+  hyphens: auto;
+}
+
+/* utilidades de alineación */
+.text-end { text-align: right; }
+.center   { text-align: center; }
+.nowrap   { white-space: nowrap; }
+
+/* Hover suave */
+.table tbody tr:hover { background: rgba(255,255,255,0.05); transition: background-color .15s ease; }
+
+/* Fila vacía / mensaje */
+.table-empty { padding: 2rem; text-align: center; opacity: .65; }
+
+/* ===== Pager ===== */
+.report-pager { display: flex; align-items: center; justify-content: space-between; padding: .5rem .75rem; }
+.pager-actions { display: flex; gap: .5rem; }
+
+/* ===== Badges (otros reportes) ===== */
+.badge-licencia, .badge-vacaciones, .badge-permiso, .badge-ausente {
+  padding: .25rem .5rem; border-radius: .35rem; font-weight: 500; font-size: .85rem;
+}
+.badge-licencia   { background: rgba(0,123,255,.15);  color: #66b3ff; }
+.badge-vacaciones { background: rgba(40,167,69,.15);  color: #7ad38a; }
+.badge-permiso    { background: rgba(255,193,7,.15);  color: #ffd666; }
+.badge-ausente    { background: rgba(220,53,69,.15);  color: #ff8a93; }

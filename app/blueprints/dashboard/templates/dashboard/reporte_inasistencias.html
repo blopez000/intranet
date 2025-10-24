@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Inasistencias{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/reportes.css') }}">
+{% endblock %}
+
+{% block content %}
+<h2 class="mb-3">Reporte · Inasistencias</h2>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="report-toolbar">
+      <div>
+        <label class="form-label">Desde</label>
+        <input id="f-start" type="date" class="form-control" />
+      </div>
+      <div>
+        <label class="form-label">Hasta</label>
+        <input id="f-end" type="date" class="form-control" />
+      </div>
+      <div>
+        <label class="form-label">Mostrar</label>
+        <select id="f-per" class="form-select">
+          <option value="30" selected>30</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+          <option value="200">200</option>
+        </select>
+      </div>
+      <div class="report-actions">
+        <button id="btn-search" class="btn btn-primary"><i class="bi bi-search"></i> Buscar</button>
+        <a id="btn-export" class="btn btn-outline-light" href="#"><i class="bi bi-download"></i> Exportar</a>
+      </div>
+      <div class="report-meta"><span id="pg-info">—</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="table-shell">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>RUT</th>
+        <th>Trabajador</th>
+        <th>Recinto</th>
+        <th>Cuenta</th>
+        <th>Cargo</th>
+        <th>Motivo</th>
+      </tr>
+    </thead>
+    <tbody id="tbl-body"></tbody>
+  </table>
+</div>
+
+<div class="report-pager">
+  <div></div>
+  <div class="pager-actions">
+    <button id="btn-prev" class="btn btn-outline-secondary btn-sm" disabled>&laquo; Anterior</button>
+    <button id="btn-next" class="btn btn-outline-secondary btn-sm" disabled>Siguiente &raquo;</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const api = "/api/inasistencias";
+  const exp = "/reporte/inasistencias/export";
+  const $s = document.getElementById("f-start");
+  const $e = document.getElementById("f-end");
+  const $per = document.getElementById("f-per");
+  const $tbl = document.getElementById("tbl-body");
+  const $prev = document.getElementById("btn-prev");
+  const $next = document.getElementById("btn-next");
+  const $info = document.getElementById("pg-info");
+  const $search = document.getElementById("btn-search");
+  const $export = document.getElementById("btn-export");
+
+  let page = 1, per_page = parseInt($per.value,10) || 30, lastPages = 0, lastTotal = 0;
+
+  function fmt(d){ return d.toISOString().slice(0,10); }
+  function defaultRange(){
+    const end = new Date();
+    const start = new Date(end); start.setDate(end.getDate()-6);
+    $s.value = $s.value || fmt(start);
+    $e.value = $e.value || fmt(end);
+  }
+
+  function setExportHref(){
+    const u = new URL(exp, location.origin);
+    u.searchParams.set("start", $s.value);
+    u.searchParams.set("end",   $e.value);
+    $export.href = u.toString();
+  }
+
+  function badge(m){
+    if(m==="Licencias" || m==="Licencia") return '<span class="badge badge-licencia">Licencia</span>';
+    if(m==="Vacaciones") return '<span class="badge badge-vacaciones">Vacaciones</span>';
+    if(m==="Permisos" || m==="Permiso") return '<span class="badge badge-permiso">Permiso</span>';
+    if(m==="Ausentes" || m==="Ausente") return '<span class="badge badge-ausente">Ausente</span>';
+    return m || "-";
+  }
+
+  function row(d){
+    return `<tr>
+      <td>${d.FECHA || ""}</td>
+      <td>${d.rut || ""}</td>
+      <td>${d.NombreTrabajador || ""}</td>
+      <td>${d.recinto || ""}</td>
+      <td>${d.Cuenta || ""}</td>
+      <td>${d.Cargo || ""}</td>
+      <td>${badge(d.motivo)}</td>
+    </tr>`;
+  }
+
+  async function load(p=1){
+    page = p;
+    per_page = parseInt($per.value,10) || 30;
+
+    const url = new URL(api, location.origin);
+    url.searchParams.set("start", $s.value);
+    url.searchParams.set("end",   $e.value);
+    url.searchParams.set("page",  page);
+    url.searchParams.set("per_page", per_page);
+
+    $tbl.innerHTML = `<tr><td colspan="7" class="table-empty">Cargando…</td></tr>`;
+    const r = await fetch(url);
+    const j = await r.json();
+
+    $tbl.innerHTML = (j.items||[]).map(row).join("") || `<tr><td colspan="7" class="text-secondary">Sin datos</td></tr>`;
+    lastPages = j.pages || 0; lastTotal = j.total || 0;
+
+    $prev.disabled = page<=1;
+    $next.disabled = !lastPages || page>=lastPages;
+
+    const startIdx = lastTotal ? ((page-1)*per_page + 1) : 0;
+    const endIdx = Math.min(page*per_page, lastTotal);
+    $info.textContent = lastTotal ? `Mostrando ${startIdx}–${endIdx} de ${lastTotal} registros` : "Sin resultados";
+    setExportHref();
+  }
+
+  defaultRange(); setExportHref(); load();
+
+  $search.addEventListener("click", ()=> load(1));
+  $prev.addEventListener("click", ()=> load(page-1));
+  $next.addEventListener("click", ()=> load(page+1));
+  [$s,$e,$per].forEach(el => el.addEventListener("change", ()=> { setExportHref(); }));
+  document.addEventListener("keydown", (ev)=>{ if(ev.key==="Enter"){ ev.preventDefault(); load(1); }});
+})();
+</script>
+{% endblock %}

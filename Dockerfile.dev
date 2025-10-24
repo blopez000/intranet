@@ -1,0 +1,30 @@
+# ===== DEV IMAGE =====
+FROM python:3.13-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PATH="/home/appuser/.local/bin:${PATH}"
+
+# Paquetes del sistema mínimos para compilar algunas wheels y usar curl
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential curl ca-certificates tzdata \
+    && rm -rf /var/lib/apt/lists/*
+
+# Usuario no root
+RUN useradd -ms /bin/bash appuser
+USER appuser
+WORKDIR /app
+
+# --- Dependencias ---
+# Usa ARG para poder alternar archivo de requisitos si tienes uno para dev
+ARG REQUIREMENTS=requirements.txt
+COPY --chown=appuser:appuser ${REQUIREMENTS} /app/requirements.txt
+RUN pip install --user -r /app/requirements.txt
+
+# Exponer puerto del servidor de desarrollo
+EXPOSE 8000
+
+# Comando por defecto en dev: autoreload y debugger
+# (el compose override puede sobreescribirlo si quieres)
+CMD ["sh", "-c", "flask --app wsgi run --host=0.0.0.0 --port=8000 --debug"]

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Usuarios · Admin{% endblock %}
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='admin.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="admin-wrap">
+
+  <div class="admin-header">
+    <div>
+      <h1 class="h4 mb-1">Usuarios</h1>
+      <div class="admin-header__meta">Gestiona roles, recintos y permisos por cuenta.</div>
+    </div>
+    <div class="admin-actions">
+      <form class="search-wrap" method="get">
+        <input class="form-control" type="search" placeholder="Buscar por nombre o email" name="q" value="{{ q or '' }}">
+        <button class="btn btn-primary"><i class="bi bi-search"></i> Buscar</button>
+      </form>
+      <a class="btn btn-success" href="{{ url_for('admin.users_create') }}"><i class="bi bi-plus-circle"></i> Crear usuario</a>
+    </div>
+  </div>
+
+  <div class="admin-card">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th style="width:36px;"></th>
+            <th>Nombre</th>
+            <th>Email</th>
+            <th>Rol</th>
+            <th>Estado</th>
+            <th style="width:140px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for u in users %}
+          <tr>
+            <td>
+              <div class="avatar-pill">{{ (u.name or u.email)[:1]|upper }}</div>
+            </td>
+            <td class="fw-semibold">
+              <a class="link-plain" href="{{ url_for('admin.user_manage', uid=u.id) }}">{{ u.name or u.email }}</a>
+            </td>
+            <td class="text-muted">{{ u.email }}</td>
+            <td><span class="badge badge-soft">{{ u.role_name }}</span></td>
+            <td>
+              {% if u.is_active %}
+                <span class="badge bg-success">Activo</span>
+              {% else %}
+                <span class="badge bg-secondary">Inactivo</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <a class="btn btn-sm btn-outline-primary"
+              href="{{ url_for('admin.user_manage', uid=u.id) }}">Gestionar</a>
+
+              </a>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="text-center text-muted py-5">Sin resultados</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

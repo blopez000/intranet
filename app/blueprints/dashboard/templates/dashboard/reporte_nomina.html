@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% block title %}Nómina Consolidada{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/reportes.css') }}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+  /* Chips de filtro (si tu CSS no los incluye) */
+  .filter-chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{display:inline-flex;align-items:center;background:#343a40;color:#fff;border-radius:20px;padding:4px 10px;font-size:.875rem}
+  .chip i{margin-right:6px;color:#ffc107}
+  .chip-close{background:transparent;border:none;color:#fff;margin-left:8px;cursor:pointer;font-size:1rem;line-height:1}
+  .chip-close:hover{color:#ff6666}
+</style>
+{% endblock %}
+
+{% block content %}
+<h2 class="mb-3"> Nómina Consolidada</h2>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="report-toolbar">
+      <div>
+        <label class="form-label">Desde</label>
+        <input id="f-start" type="text" class="form-control js-date" value="{{ start|default('', true) }}">
+      </div>
+      <div>
+        <label class="form-label">Hasta</label>
+        <input id="f-end" type="text" class="form-control js-date" value="{{ end|default('', true) }}">
+      </div>
+      <div>
+        <label class="form-label">Mostrar</label>
+        <select id="f-per" class="form-select">
+          <option value="30">30</option>
+          <option value="50">50</option>
+          <option value="100" selected>100</option>
+          <option value="200">200</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">Cuenta Área</label>
+        <select id="f-cta" class="form-select">
+          <option value="">Todas las cuentas</option>
+        </select>
+      </div>
+      <div class="report-actions">
+        <button id="btn-search" class="btn btn-primary">
+          <i class="bi bi-search"></i> Buscar
+        </button>
+        <a id="btn-export" class="btn btn-outline-light" href="#">
+          <i class="bi bi-download"></i> Exportar
+        </a>
+      </div>
+      <div class="report-meta"><span id="pg-info">—</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Chips de filtros activos -->
+<div id="chips" class="filter-chips mb-3" style="display:none;">
+  <span id="chip-cta" class="chip">
+    <i class="bi bi-tag-fill"></i>
+    <span id="chip-text"></span>
+    <button id="chip-clear" class="chip-close" title="Quitar filtro">&times;</button>
+  </span>
+</div>
+
+<div class="table-shell no-hscroll">
+  <table class="table table-fit">
+    <!-- 100%: ajusta si necesitas -->
+    <colgroup>
+      <col style="width:10%;"> <!-- RUT -->
+      <col style="width:20%;"> <!-- NOMBRE -->
+      <col style="width:12%;"> <!-- RECINTO -->
+      <col style="width:12%;"> <!-- CUENTA -->
+      <col style="width:16%;"> <!-- CARGO -->
+      <col style="width:10%;"> <!-- ASISTIDOS -->
+      <col style="width:10%;"> <!-- INASISTENTES -->
+      <col style="width:10%;"> <!-- TOTAL -->
+      <col style="width:10%;"> <!-- % ASISTENCIA -->
+    </colgroup>
+    <thead>
+      <tr>
+        <th>RUT</th>
+        <th>NOMBRE</th>
+        <th>RECINTO</th>
+        <th>CUENTA ÁREA</th>
+        <th>CARGO</th>
+        <th class="center">ASISTIDOS</th>
+        <th class="center">INASISTENTES</th>
+        <th class="center">TOTAL</th>
+        <th class="center">% ASISTENCIA</th>
+      </tr>
+    </thead>
+    <tbody id="tbl-body"></tbody>
+  </table>
+</div>
+
+<div class="report-pager">
+  <div></div>
+  <div class="pager-actions">
+    <button id="btn-prev" class="btn btn-outline-secondary btn-sm" disabled>&laquo; Anterior</button>
+    <button id="btn-next" class="btn btn-outline-secondary btn-sm" disabled>Siguiente &raquo;</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+<script>
+(() => {
+  const api     = "/api/nomina";
+  const exp     = "/nomina/export";
+  const apiCtas = "/api/nomina/cuentas";
+
+  // ---- refs
+  const $s=document.getElementById("f-start"), $e=document.getElementById("f-end");
+  const $per=document.getElementById("f-per"), $cta=document.getElementById("f-cta");
+  const $tbl=document.getElementById("tbl-body"), $prev=document.getElementById("btn-prev");
+  const $next=document.getElementById("btn-next"), $info=document.getElementById("pg-info");
+  const $search=document.getElementById("btn-search"), $export=document.getElementById("btn-export");
+
+  // chips
+  const $chips=document.getElementById("chips"), $chipText=document.getElementById("chip-text");
+  const $chipClear=document.getElementById("chip-clear");
+
+  let page=1, per_page=parseInt(($per && $per.value)||"100",10), pages=0, total=0;
+
+  // ---- helpers fecha
+  function isoToDMY(iso){ if(!iso) return ""; const [y,m,d]=iso.split("-"); return `${d}-${m}-${y}`; }
+  function dmyToISO(dmy){ const [d,m,y]=(dmy||"").split("-"); return (y&&m&&d)?`${y}-${m}-${d}`:dmy; }
+
+  // ---- init flatpickr (1° del mes -> hoy)
+  function initDatePickers(){
+    const startISO="{{ start }}", endISO="{{ end }}";
+    $s.value=isoToDMY(startISO); $e.value=isoToDMY(endISO);
+    const fpOpts={dateFormat:"d-m-Y",allowInput:true,locale:flatpickr.l10ns.es};
+    flatpickr($s,{...fpOpts,defaultDate:isoToDMY(startISO)});
+    flatpickr($e,{...fpOpts,defaultDate:isoToDMY(endISO)});
+  }
+
+  // ---- dropdown cuentas según permisos (usa rango actual)
+  async function loadCuentas() {
+    const u=new URL(apiCtas, location.origin);
+    u.searchParams.set("start", dmyToISO($s.value));
+    u.searchParams.set("end",   dmyToISO($e.value));
+    const r=await fetch(u); const cuentas=await r.json();
+    $cta.innerHTML='<option value="">Todas las cuentas</option>';
+    (cuentas||[]).forEach(c=>{
+      const o=document.createElement("option"); o.value=c; o.textContent=c; $cta.appendChild(o);
+    });
+    // Auto-select si solo hay 1 opción real
+    if ((cuentas||[]).length===1){ $cta.value=cuentas[0]; }
+  }
+
+  // ---- chip dinámico
+  function updateChip(){
+    if ($cta.value){
+      const label=$cta.options[$cta.selectedIndex]?.text||$cta.value;
+      $chipText.textContent=`Cuenta Área: ${label}`;
+      $chips.style.display="block";
+    } else $chips.style.display="none";
+  }
+  $chipClear.addEventListener("click",()=>{ $cta.value=""; updateChip(); load(1); });
+
+  // ---- export href
+  function setExportHref(){
+    const u=new URL(exp, location.origin);
+    u.searchParams.set("start", dmyToISO($s.value));
+    u.searchParams.set("end",   dmyToISO($e.value));
+    if ($cta.value) u.searchParams.set("cuenta_area", $cta.value);
+    $export.href=u.toString();
+  }
+
+  // ---- row renderer
+  function row(t){
+    const n=v=> (v==null?"":v);
+    return `<tr>
+      <td class="nowrap">${n(t.rut)}</td>
+      <td class="wrap">${n(t.nombre)}</td>
+      <td class="wrap">${n(t.recinto)}</td>
+      <td class="nowrap center">${n(t.cuenta_area)}</td>
+      <td class="wrap">${n(t.cargo)}</td>
+      <td class="center">${n(t.dias_asistidos)}</td>
+      <td class="center">${n(t.dias_inasistentes)}</td>
+      <td class="center">${n(t.total_dias)}</td>
+      <td class="center">${n(t.pct_asistencia)}</td>
+    </tr>`;
+  }
+
+  // ---- load page
+  async function load(p=1){
+    page=p; per_page=parseInt(($per && $per.value)||"100",10);
+
+    const url=new URL(api, location.origin);
+    url.searchParams.set("start", dmyToISO($s.value));
+    url.searchParams.set("end",   dmyToISO($e.value));
+    if ($cta.value) url.searchParams.set("cuenta_area", $cta.value);
+    url.searchParams.set("page", page);
+    url.searchParams.set("per_page", per_page);
+
+    $tbl.innerHTML=`<tr><td colspan="9" class="table-empty">Cargando…</td></tr>`;
+    const r=await fetch(url); const j=await r.json();
+
+    $tbl.innerHTML=(j.items||[]).map(row).join("")||`<tr><td colspan="9" class="text-secondary">Sin datos</td></tr>`;
+    pages=j.pages||0; total=j.total||0;
+
+    $prev.disabled=page<=1; $next.disabled=!pages || page>=pages;
+
+    const startIdx= total?((page-1)*per_page+1):0;
+    const endIdx= Math.min(page*per_page, total);
+    $info.textContent= total?`Mostrando ${startIdx}–${endIdx} de ${total} registros`:"Sin resultados";
+
+    updateChip(); setExportHref();
+  }
+
+  // ---- listeners
+  $prev.addEventListener("click",()=>load(page-1));
+  $next.addEventListener("click",()=>load(page+1));
+  $search.addEventListener("click",()=>load(1));
+  [$s,$e,$per,$cta].forEach(el=> el.addEventListener("change",()=>{ setExportHref(); }));
+
+  // ---- boot
+  initDatePickers();
+  loadCuentas().then(()=>{ setExportHref(); load(1); });
+  // refrescar lista de cuentas si cambian fechas
+  [$s,$e].forEach(el=> el.addEventListener("change", ()=> { loadCuentas(); }));
+})();
+</script>
+{% endblock %}

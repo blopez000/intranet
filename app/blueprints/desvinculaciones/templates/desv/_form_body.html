@@ -1,0 +1,151 @@
+{# Parcial: sin extends; estilos vienen desde css/desv.css #}
+<form id="desvForm"
+      method="post"
+      action="{{ url_for('desvinculaciones.edit', id=obj.id) if obj else url_for('desvinculaciones.create') }}"
+      autocomplete="off">
+
+  {% if csrf_token %}<input type="hidden" name="csrf_token" value="{{ csrf_token }}">{% endif %}  <input type="hidden" name="FECHA_CTTO">
+  <input type="hidden" name="FECHA_TERMINO">
+
+  <div class="row g-3">
+    <div class="col-12"><div class="fw-semibold text-uppercase small opacity-75 mb-1">Datos del colaborador</div></div>
+
+    <div class="col-md-3">
+      <label class="form-label">RUT *</label>
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-clipboard"></i></span>
+        <input name="RUT" class="form-control" placeholder="12.345.678-9" required value="{{ obj.RUT if obj else '' }}">
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Apellidos y Nombres</label>
+      <input name="APELLIDOS_NOMBRES" class="form-control" placeholder="Pérez Juan" value="{{ obj.APELLIDOS_NOMBRES if obj else '' }}">
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Empresa</label>
+      <input name="EMPRESA" class="form-control" list="dl_empresas" value="{{ obj.EMPRESA if obj else '' }}">
+      <datalist id="dl_empresas">
+        {% for v in empresas_opts or [] %}<option value="{{ v }}">{% endfor %}
+      </datalist>
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Unidad de Negocio</label>
+      <input name="UNIDAD_DE_NEGOCIO" class="form-control" list="dl_unidades" value="{{ obj.UNIDAD_DE_NEGOCIO if obj else '' }}">
+      <datalist id="dl_unidades">
+        {% for v in unidades_opts or [] %}<option value="{{ v }}">{% endfor %}
+      </datalist>
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Cargo</label>
+      <input name="CARGO" class="form-control" list="dl_cargos" value="{{ obj.CARGO if obj else '' }}">
+      <datalist id="dl_cargos">
+        {% for v in cargos_opts or [] %}<option value="{{ v }}">{% endfor %}
+      </datalist>
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Fecha Contrato</label>
+      <div class="gcm-date">
+        <input name="FECHA_CTTO_txt" class="form-control gcm-date-text" placeholder="dd-mm-yyyy" inputmode="numeric" maxlength="10"
+               value="{{ obj.FECHA_CTTO.strftime('%d-%m-%Y') if obj and obj.FECHA_CTTO else '' }}">
+        <button class="gcm-date-btn" type="button" title="Calendario"><i class="bi bi-calendar"></i></button>
+        <input type="date" class="gcm-date-native"
+               value="{{ obj.FECHA_CTTO.strftime('%Y-%m-%d') if obj and obj.FECHA_CTTO else '' }}">
+      </div>
+      <div class="form-hint">Se guarda como DATE (yyyy-mm-dd).</div>
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Fecha Término</label>
+      <div class="gcm-date">
+        <input name="FECHA_TERMINO_txt" class="form-control gcm-date-text" placeholder="dd-mm-yyyy" inputmode="numeric" maxlength="10"
+               value="{{ obj.FECHA_TERMINO.strftime('%d-%m-%Y') if obj and obj.FECHA_TERMINO else '' }}">
+        <button class="gcm-date-btn" type="button" title="Calendario"><i class="bi bi-calendar"></i></button>
+        <input type="date" class="gcm-date-native"
+               value="{{ obj.FECHA_TERMINO.strftime('%Y-%m-%d') if obj and obj.FECHA_TERMINO else '' }}">
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Causa de Egreso</label>
+      <input name="CAUSA_EGRESO" class="form-control" placeholder="Renuncia / Despido / Acuerdo..." value="{{ obj.CAUSA_EGRESO if obj else '' }}">
+    </div>
+
+    <div class="col-12 mt-2"><div class="fw-semibold text-uppercase small opacity-75 mb-1">Más detalles</div></div>
+
+    <div class="col-md-6">
+      <label class="form-label">Motivo de salida</label>
+      <input name="MOTIVO_SALIDA" class="form-control" placeholder="Ej.: Oferta externa con mejor renta" value="{{ obj.MOTIVO_SALIDA if obj else '' }}">
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Contrato</label>
+      <input name="Contrato" class="form-control" placeholder="Indefinido / Plazo fijo..." value="{{ obj.Contrato if obj else '' }}">
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Fecha contrato (texto)</label>
+      <input name="fecha_contrato" class="form-control" placeholder="opcional" value="{{ obj.fecha_contrato if obj else '' }}">
+    </div>
+  </div>
+
+  <div class="mt-3 d-flex gap-2">
+    <button class="btn btn-primary"><i class="bi bi-save2"></i> {{ 'Actualizar' if obj else 'Guardar' }}</button>
+    <a href="{{ url_for('desvinculaciones.index') }}" class="btn btn-outline-secondary">Cancelar</a>
+  </div>
+</form>
+
+<script>
+(function(){
+  function toISO(ddmmyyyy){
+    if(!ddmmyyyy) return "";
+    const v = ddmmyyyy.replace(/[^\d]/g,"");
+    if(v.length!==8) return "";
+    return `${v.slice(4)}-${v.slice(2,4)}-${v.slice(0,2)}`;
+  }
+  function toDDMM(iso){
+    if(!iso) return "";
+    const [y,m,d] = iso.split("-");
+    return (y&&m&&d)? `${d}-${m}-${y}` : "";
+  }
+  function mask(el){
+    el.addEventListener("input", e=>{
+      let v = e.target.value.replace(/[^\d]/g,"").slice(0,8);
+      if(v.length>=5) v = v.slice(0,2)+"-"+v.slice(2,4)+"-"+v.slice(4);
+      else if(v.length>=3) v = v.slice(0,2)+"-"+v.slice(2);
+      e.target.value = v;
+      const wrap = el.closest(".gcm-date");
+      const native = wrap? wrap.querySelector(".gcm-date-native") : null;
+      if(native) native.value = toISO(v);
+    });
+  }
+  document.querySelectorAll(".gcm-date").forEach(wrap=>{
+    const text   = wrap.querySelector(".gcm-date-text");
+    const native = wrap.querySelector(".gcm-date-native");
+    const btn    = wrap.querySelector(".gcm-date-btn");
+    if(text && native){
+      if(text.value && !native.value) native.value = toISO(text.value);
+      mask(text);
+      native.addEventListener("change", ()=>{ text.value = toDDMM(native.value); });
+    }
+    btn && btn.addEventListener("click", (e)=>{
+      e.preventDefault();
+      if(typeof native.showPicker==="function") native.showPicker(); else native.focus();
+    });
+  });
+
+  const form = document.getElementById("desvForm");
+  form.addEventListener("submit", ()=>{
+    const fc_txt = form.querySelector("input[name=FECHA_CTTO_txt]");
+    const ft_txt = form.querySelector("input[name=FECHA_TERMINO_txt]");
+    const fc     = form.querySelector("input[name=FECHA_CTTO]");
+    const ft     = form.querySelector("input[name=FECHA_TERMINO]");
+    if(fc_txt && fc) fc.value = toISO(fc_txt.value);
+    if(ft_txt && ft) ft.value = toISO(ft_txt.value);
+  });
+})();
+</script>

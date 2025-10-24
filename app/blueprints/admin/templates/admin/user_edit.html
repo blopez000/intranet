@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Editar usuario · Admin{% endblock %}
+
+{% block head_extra %}
+<link href="{{ url_for('admin.static', filename='admin.css') }}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="admin-wrap">
+
+  <div class="admin-header">
+    <div>
+      <h1 class="h4 mb-1">Editar usuario</h1>
+      <div class="admin-header__meta">Configura rol, estado y permisos principales.</div>
+    </div>
+    <div class="admin-actions">
+      <a class="btn btn-outline-light" href="{{ url_for('admin.users_list') }}">
+        <i class="bi bi-arrow-left"></i> Volver
+      </a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="position-fixed top-0 end-0 p-3" style="z-index:1080">
+        {% for cat, msg in messages %}
+          <div class="toast align-items-center text-bg-{{ 'warning' if cat=='message' else cat }} show" role="alert">
+            <div class="d-flex">
+              <div class="toast-body">{{ msg }}</div>
+              <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="admin-card">
+    <div class="admin-card__body">
+      <form method="post" action="{{ url_for('admin.users_edit', uid=user.id) }}">
+        <input type="hidden" name="csrf_token"
+               value="{% if csrf_token is string %}{{ csrf_token }}{% else %}{{ csrf_token() }}{% endif %}">
+
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Nombre</label>
+            <input class="form-control" type="text" value="{{ user.name }}" disabled>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Email</label>
+            <input class="form-control" type="email" value="{{ user.email }}" disabled>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Rol</label>
+            <select class="form-select" name="role_id" required>
+              {% for r in roles %}
+                <option value="{{ r.id }}" {% if r.id == user.role_id %}selected{% endif %}>
+                  {{ r.name }} ({{ r.code }})
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label d-block">Estado</label>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="is_active" id="sw_active"
+                     {% if user.is_active %}checked{% endif %}>
+              <label for="sw_active" class="form-check-label">Usuario activo</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-end mt-3">
+          <button class="btn btn-primary"><i class="bi bi-save"></i> Guardar cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Recintos del usuario · Admin{% endblock %}
+
+{% block head_extra %}
+<link href="{{ url_for('admin.static', filename='admin.css') }}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="admin-wrap">
+
+  <div class="admin-header">
+    <div>
+      <h1 class="h4 mb-1">Recintos de {{ user.name or user.email }}</h1>
+      <div class="admin-header__meta">Asigna recintos y nivel de acceso.</div>
+    </div>
+    <div class="admin-actions">
+      <a class="btn btn-outline-light" href="{{ url_for('admin.users_edit', uid=user.id) }}">
+        <i class="bi bi-arrow-left"></i> Volver a usuario
+      </a>
+    </div>
+  </div>
+
+  <div class="admin-card mb-3">
+    <div class="admin-card__body">
+      <form class="row g-2" method="post" action="{{ url_for('admin.users_recintos_add', uid=user.id) }}">
+        <input type="hidden" name="csrf_token"
+               value="{% if csrf_token is string %}{{ csrf_token }}{% else %}{{ csrf_token() }}{% endif %}">
+        <div class="col-md-6">
+          <label class="form-label">Recinto</label>
+          <select class="form-select" name="recinto_id" required>
+            <option value="">Selecciona…</option>
+            {% for r in recintos_catalog %}
+              <option value="{{ r.id }}">{{ r.name }} ({{ r.code }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Nivel</label>
+          <select class="form-select" name="nivel" required>
+            {% for n in [1,2,3] %}
+              <option value="{{ n }}">{{ n }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+          <button class="btn btn-primary w-100"><i class="bi bi-plus-circle"></i> Asignar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="admin-card">
+    <div class="admin-card__body p-0">
+      <div class="table-responsive">
+        <table class="table-admin align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Recinto</th>
+              <th>Código</th>
+              <th>Nivel</th>
+              <th>Estado</th>
+              <th style="width:140px;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in recintos %}
+            <tr>
+              <td>{{ r.name }}</td>
+              <td class="text-muted">{{ r.code }}</td>
+              <td><span class="badge-soft">Nivel {{ r.nivel }}</span></td>
+              <td>
+                {% if r.is_active %}<span class="badge bg-success">Activo</span>
+                {% else %}<span class="badge bg-secondary">Inactivo</span>{% endif %}
+              </td>
+              <td class="text-end">
+                <form method="post" action="{{ url_for('admin.users_recintos_remove', uid=user.id, rid=r.id) }}"
+                      onsubmit="return confirm('¿Quitar este recinto del usuario?');">
+                  <input type="hidden" name="csrf_token"
+                         value="{% if csrf_token is string %}{{ csrf_token }}{% else %}{{ csrf_token() }}{% endif %}">
+                  <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i> Quitar</button>
+                </form>
+              </td>
+            </tr>
+            {% else %}
+              <tr><td colspan="5" class="text-center text-muted py-5">Sin recintos asignados</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

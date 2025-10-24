@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+  <h2 class="mb-3">Dashboard</h2>
+
+  <form class="row g-2 align-items-end mb-3" method="get" action="{{ url_for('dashboard.dashboard') }}">
+    <div class="col-sm-3">
+      <label class="form-label">Desde</label>
+      <input type="date" name="desde" class="form-control" value="{{ filtros.desde or '' }}">
+    </div>
+    <div class="col-sm-3">
+      <label class="form-label">Hasta</label>
+      <input type="date" name="hasta" class="form-control" value="{{ filtros.hasta or '' }}">
+    </div>
+
+    <div class="col-sm-3">
+      <label class="form-label">Obra / Recinto</label>
+      {% set has_multiple_recintos = (opciones.obras|length) > 1 %}
+      <select name="obra_id" class="form-select">
+        {# Mostrar "Todos" solo si el usuario tiene más de un recinto disponible #}
+        {% if has_multiple_recintos %}
+          <option value="" {{ '' if filtros.obra_id else 'selected' }}>Todos</option>
+        {% endif %}
+        {% for o in opciones.obras %}
+          {# Si solo hay un recinto, selecciónalo por defecto cuando no viene obra_id #}
+          <option
+            value="{{ o.value }}"
+            {{
+              'selected'
+              if (filtros.obra_id|string) == (o.value|string)
+                 or (not filtros.obra_id and not has_multiple_recintos)
+              else ''
+            }}
+          >
+            {{ o.label }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-sm-3 d-grid">
+      <button class="btn btn-primary mt-3 mt-sm-0">Aplicar filtros</button>
+    </div>
+
+    <div class="col-sm-3">
+      <label class="form-label">Cargo </label>
+      <select name="cargo" class="form-select">
+        <option value="">Todos</option>
+        {% for c in opciones.cargos %}
+          <option value="{{ c.value }}" {{ 'selected' if filtros.cargo == c.value else '' }}>
+            {{ c.value }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-sm-3">
+      <label class="form-label">Cuenta / Área</label>
+      <select name="cuenta_area" class="form-select">
+        <option value="">Todas</option>
+        {% for c in opciones.cuentas %}
+          <option value="{{ c.value }}" {{ 'selected' if filtros.cuenta_area == c.value else '' }}>
+            {{ c.value }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+  </form>
+
+  <!-- KPIs -->
+  <div class="row g-3 mb-3">
+    <div class="col-md-3">
+      <div class="card kpi">
+        <div class="card-body">
+          <div class="small text-secondary">Asistencia</div>
+          <div class="fs-2 fw-bold">{{ kpis.asistencia }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card kpi">
+        <div class="card-body">
+          <div class="small text-secondary">Inasistencia</div>
+          <div class="fs-2 fw-bold">{{ kpis.inasistencia }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card kpi">
+        <div class="card-body">
+          <div class="small text-secondary">Dotación</div>
+          <div class="fs-2 fw-bold">{{ kpis.dotacion }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card kpi">
+        <div class="card-body">
+          <div class="small text-secondary">% Presentismo</div>
+          <div class="fs-2 fw-bold">{{ (kpis.pct_presentismo or 0)|round(2) }}%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resumen por recinto -->
+  <h6 class="mt-4">Resumen por recinto</h6>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover align-middle">
+      <thead>
+        <tr>
+          <th>RECINTO</th>
+          <th>ASIST.</th>
+          <th>INASIST.</th>
+          <th>DOTACIÓN</th>
+          <th>LICENCIAS</th>
+          <th>PERMISOS</th>
+          <th>VACACIONES</th>
+          <th>% PRES.</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in resumen_recinto %}
+          <tr>
+            <td>{{ r.recinto }}</td>
+            <td>{{ r.asist }}</td>
+            <td>{{ r.inasist }}</td>
+            <td>{{ r.dotacion }}</td>
+            <td>{{ r.licencias }}</td>
+            <td>{{ r.permisos }}</td>
+            <td>{{ r.vacaciones }}</td>
+            <td>{{ r.pct_pres }}%</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="8" class="text-center text-secondary">Sin datos para el rango.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Inasistencias por recinto -->
+  <h6 class="mt-4">Inasistencias por recinto</h6>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover align-middle">
+      <thead>
+        <tr>
+          <th>RECINTO</th>
+          <th class="text-end">CANTIDAD</th>
+          <th class="text-end">%</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in inas_por_recinto %}
+          <tr>
+            <td>{{ r.recinto }}</td>
+            <td class="text-end">{{ r.cantidad }}</td>
+            <td class="text-end">{{ r.pct }}%</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="3" class="text-center text-secondary">Sin datos.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Motivos de inasistencia -->
+  <h6 class="mt-4">Motivos de inasistencia</h6>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover align-middle">
+      <thead>
+        <tr>
+          <th>Motivo</th>
+          <th class="text-end">Cantidad</th>
+          <th class="text-end">%</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in motivos %}
+          <tr>
+            <td>{{ m.motivo }}</td>
+            <td class="text-end">{{ m.cantidad }}</td>
+            <td class="text-end">{{ m.pct }}%</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="3" class="text-center text-secondary">Sin datos.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

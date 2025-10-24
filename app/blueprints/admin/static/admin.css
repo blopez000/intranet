@@ -1,0 +1,67 @@
+/* ===== Admin — estilos propios (coherentes con app.css) ===== */
+
+:root{
+  --admin-chip-bg: color-mix(in srgb, var(--primary-1) 10%, transparent);
+  --admin-chip-text: color-mix(in srgb, var(--text-1) 85%, #fff 15%);
+}
+
+.admin-wrap{max-width:1180px;margin:0 auto}
+
+/* Header */
+.admin-header{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px
+}
+.admin-header__meta{color:var(--text-2)}
+.admin-actions{display:flex;gap:10px;flex-wrap:wrap}
+.admin-search{display:flex;gap:.5rem}
+.admin-search .form-control{min-width:260px}
+
+/* Card */
+.admin-card{
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--elev-1)
+}
+.admin-card__body{padding:14px 16px}
+
+/* Tabla */
+.table-admin{width:100%;border-collapse:collapse;margin:0}
+.table-admin thead th{
+  position:sticky;top:0;z-index:1;
+  background:color-mix(in srgb,var(--bg-2) 85%,transparent);
+  border-bottom:1px solid var(--line);
+  text-transform:uppercase;letter-spacing:.04em;
+  font-weight:800;font-size:.78rem;color:var(--text-2);
+  padding:.7rem .65rem;text-align:left
+}
+.table-admin tbody tr{border-bottom:1px solid var(--line);background:rgba(255,255,255,.03)}
+:root[data-theme="light"] .table-admin tbody tr{background:#fff}
+.table-admin tbody tr:hover{background:rgba(255,255,255,.06)}
+:root[data-theme="light"] .table-admin tbody tr:hover{background:#f7fbff}
+.table-admin td{padding:.65rem}
+
+/* Badges */
+.badge-soft{
+  display:inline-block;padding:.32rem .6rem;border-radius:999px;font-weight:700;font-size:.78rem;
+  border:1px solid var(--line);background:var(--admin-chip-bg);color:var(--admin-chip-text)
+}
+
+/* Avatar con inicial */
+.admin-avatar{
+  width:32px;height:32px;border-radius:50%;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--admin-chip-bg);color:var(--primary-1);font-weight:800
+}
+
+/* Botones */
+.btn{border-radius:14px;height:44px;display:inline-flex;align-items:center;gap:.5rem}
+.btn-sm{height:auto;border-radius:12px}
+.btn-primary{
+  background:linear-gradient(180deg,var(--primary-1),var(--primary-2));
+  border:1px solid color-mix(in srgb,var(--primary-2) 60%,black);color:#fff
+}
+
+/* Responsive */
+@media (max-width:768px){
+  .admin-header{flex-direction:column;align-items:stretch}
+  .admin-actions{justify-content:space-between}
+  .admin-search .form-control{min-width:0;width:100%}
+}

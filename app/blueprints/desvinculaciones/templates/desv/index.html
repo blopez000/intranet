@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}Desvinculaciones {% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+<link rel="stylesheet" href="{{ url_for('desvinculaciones.static', filename='desv.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="gcm-wrapper">
+
+  <!-- ======== BARRA SUPERIOR: TODO EN UNA FILA ======== -->
+  <div class="gcm-toolbar">
+    <form method="get" class="gcm-filter-grid">
+
+      <!-- Desde -->
+      <div class="filter-group">
+        <label>Desde</label>
+        <input type="text" class="js-date same-h" name="desde" value="{{ desde or '' }}"
+               placeholder="dd-mm-aaaa" autocomplete="off">
+      </div>
+
+      <!-- Hasta -->
+      <div class="filter-group">
+        <label>Hasta</label>
+        <input type="text" class="js-date same-h" name="hasta" value="{{ hasta or '' }}"
+               placeholder="dd-mm-aaaa" autocomplete="off">
+      </div>
+        <!-- Área -->
+        <div class="filter-group">
+         <label>Área</label>
+        <select name="area" class="same-h">
+         <option value="">Todas</option>
+        {% for a in areas %}
+        <option value="{{ a }}" {% if area and a == area %}selected{% endif %}>{{ a }}</option>
+        {% endfor %}
+        </select>
+        </div>
+
+
+      <!-- Mostrar (per) -->
+      <div class="filter-group compact">
+        <label>Mostrar</label>
+        <select name="per" class="same-h" onchange="this.form.page.value=1; this.form.submit()">
+          {% for option in [50,100,200,500,1000] %}
+            <option value="{{ option }}" {% if per == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Buscar -->
+      <button class="btn-primary same-h btn-filter" type="submit" title="Aplicar filtros">
+        <i class="bi bi-search"></i> <span class="btn-text">Buscar</span>
+      </button>
+
+      <!-- Exportar (usa los mismos filtros, exporta TODO) -->
+      <a class="btn-outline same-h btn-filter"
+         href="{{ url_for('desvinculaciones.export_excel', desde=desde, hasta=hasta, area=area) }}"
+         title="Exportar todo lo filtrado">
+        <i class="bi bi-download"></i> <span class="btn-text">Exportar</span>
+      </a>
+
+      <!-- Resumen (misma fila, a la derecha) -->
+      <div class="gcm-summary-inline">
+        {% if total > 0 %}
+          Mostrando {{ first_item }}–{{ last_item }} de {{ total }} registros
+          {% if desde or hasta or area %}<span class="text-secondary-50">· filtrados</span>{% endif %}
+        {% else %} Sin registros {% endif %}
+      </div>
+
+      <!-- Oculto: al cambiar per o buscar, forzamos page=1 -->
+      <input type="hidden" name="page" value="{{ page }}">
+    </form>
+  </div>
+
+  <!-- ======== TABLA ======== -->
+  <div class="gcm-card p-0">
+    <div class="gcm-table-container">
+      <table class="gcm-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>RUT</th>
+            <th>NOMBRE</th>
+            <th>EMPRESA</th>
+            <th>ÁREA</th>
+            <th>CARGO</th>
+            <th>F. CONTRATO</th>
+            <th>F. TÉRMINO</th>
+            <th>CAUSA</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td class="text-secondary">{{ r.id }}</td>
+            <td class="text-monospace">{{ r.RUT or '—' }}</td>
+            <td class="text-truncate" style="max-width:260px">{{ r.APELLIDOS_NOMBRES or '—' }}</td>
+            <td>{{ r.EMPRESA or '—' }}</td>
+            <td class="text-truncate" style="max-width:220px">{{ r.UNIDAD_DE_NEGOCIO or '—' }}</td>
+            <td class="text-truncate" style="max-width:260px">{{ r.CARGO or '—' }}</td>
+            <td>{{ r.FECHA_CTTO or '—' }}</td>
+            <td>{{ r.FECHA_TERMINO or '—' }}</td>
+            <td class="text-truncate" style="max-width:260px">{{ r.CAUSA_EGRESO or '—' }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="9" class="text-center py-4 text-secondary">No hay resultados</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ======== PAGINACIÓN ======== -->
+    {% if total > per %}
+    <div class="gcm-pagination">
+      <nav>
+        <ul class="pagination">
+          {% set base = url_for('desvinculaciones.index') %}
+          {% set qs = 'desde=' ~ (desde|urlencode) ~ '&hasta=' ~ (hasta|urlencode) ~ '&area=' ~ (area|urlencode) ~ '&per=' ~ per %}
+
+          <li class="{% if page <= 1 %}disabled{% endif %}">
+            <a href="{{ base }}?{{ qs }}&page=1" aria-label="Primera">&laquo;&laquo;</a>
+          </li>
+          <li class="{% if page <= 1 %}disabled{% endif %}">
+            <a href="{{ base }}?{{ qs }}&page={{ 1 if page<=1 else page-1 }}" aria-label="Anterior">&laquo;</a>
+          </li>
+
+          {% set start = 1 if page-2 <= 1 else page-2 %}
+          {% set end   = last_page if page+2 >= last_page else page+2 %}
+          {% for p in range(start, end+1) %}
+            <li class="{% if p == page %}active{% endif %}">
+              <a href="{{ base }}?{{ qs }}&page={{ p }}">{{ p }}</a>
+            </li>
+          {% endfor %}
+
+          <li class="{% if page >= last_page %}disabled{% endif %}">
+            <a href="{{ base }}?{{ qs }}&page={{ last_page if page>=last_page else page+1 }}" aria-label="Siguiente">&raquo;</a>
+          </li>
+          <li class="{% if page >= last_page %}disabled{% endif %}">
+            <a href="{{ base }}?{{ qs }}&page={{ last_page }}" aria-label="Última">&raquo;&raquo;</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+<script>
+  // Datepicker en español, formato dd-mm-aaaa
+  flatpickr(".js-date", {
+    dateFormat: "d-m-Y",
+    allowInput: true,
+    locale: flatpickr.l10ns.es
+  });
+</script>
+{% endblock %}

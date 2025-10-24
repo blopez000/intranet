@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% block title %}dashboard Rotación{% endblock %}
+
+{% block content %}
+<style>
+  /* ---- métricas y contenedores ---- */
+  .card-lite{border-radius:.75rem}
+  .metric{border-radius:1rem;padding:1rem 1.25rem;background:var(--bs-dark-bg-subtle,#0f172a);box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 1px 2px rgba(0,0,0,.15)}
+  .metric .title{font-size:.8rem;opacity:.8;text-transform:uppercase;letter-spacing:.05em}
+  .metric .value{font-size:2rem;font-weight:800;line-height:1}
+  .metric .sub{font-size:.85rem;opacity:.8}
+  .metric.danger{background:linear-gradient(90deg,#b91c1c,#7f1d1d);color:#fff}
+
+  /* ---- control de fecha (igual a tu otro dashboard) ---- */
+  .gcm-date{position:relative}
+  .gcm-date .form-control{padding-right:2.3rem}
+  .gcm-date-btn{position:absolute;right:.35rem;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--bs-secondary-color);padding:0 .35rem}
+  .gcm-date-btn:hover{color:var(--bs-body-color)}
+  .gcm-date-native{position:absolute;inset:0;opacity:0;pointer-events:none}
+</style>
+
+<h3 class="mb-3"> Rotación </h3>
+
+<!-- ====== FILTROS ====== -->
+<form class="card card-body card-lite mb-3" method="get">
+  <div class="row g-3 align-items-end">
+    <!-- Desde -->
+    <div class="col-md-3">
+      <label class="form-label">Desde</label>
+      <div class="gcm-date">
+        <input name="desde" class="form-control gcm-date-text"
+               placeholder="dd-mm-yyyy"
+               value="{{ ini.strftime('%d-%m-%Y') }}">
+        <button class="gcm-date-btn" type="button" title="Abrir calendario">
+          <i class="bi bi-calendar"></i>
+        </button>
+        <input type="date" class="gcm-date-native">
+      </div>
+    </div>
+
+    <!-- Hasta -->
+    <div class="col-md-3">
+      <label class="form-label">Hasta</label>
+      <div class="gcm-date">
+        <input name="hasta" class="form-control gcm-date-text"
+               placeholder="dd-mm-yyyy"
+               value="{{ fin.strftime('%d-%m-%Y') }}">
+        <button class="gcm-date-btn" type="button" title="Abrir calendario">
+          <i class="bi bi-calendar"></i>
+        </button>
+        <input type="date" class="gcm-date-native">
+      </div>
+    </div>
+
+    <!-- Área / Cuenta -->
+    <div class="col-md-3">
+      <label class="form-label">Área</label>
+      <select name="cuenta" class="form-select">
+        <option value="">Todas</option>
+        {% for c in cuentas_opts %}
+          <option value="{{ c }}" {{ 'selected' if cuenta==c else '' }}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Cargo -->
+    <div class="col-md-3">
+      <label class="form-label">Cargo</label>
+      <select name="cargo" class="form-select">
+        <option value="">Todos</option>
+        {% for c in cargos_opts %}
+          <option value="{{ c }}" {{ 'selected' if cargo==c else '' }}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-12 d-flex gap-2">
+      <button class="btn btn-primary"><i class="bi bi-funnel"></i> Aplicar filtros</button>
+      <a class="btn btn-outline-secondary" href="{{ url_for('dashboard.rotacion_filtros') }}">Limpiar</a>
+    </div>
+  </div>
+</form>
+
+<!-- ====== CARDS ====== -->
+<div class="row g-3">
+  <div class="col-lg-3">
+    <div class="metric danger">
+      <div class="title">Rotación del período</div>
+      <div class="value">{{ ('%.2f'|format(rotacion)) ~ '%' if rotacion is not none else '—' }}</div>
+      <div class="sub">{{ ini.strftime('%d-%m-%Y') }} — {{ fin.strftime('%d-%m-%Y') }}</div>
+    </div>
+  </div>
+  <div class="col-lg-3">
+    <div class="metric">
+      <div class="title">Desvinculados</div>
+      <div class="value">{{ d }}</div>
+      <div class="sub">FECHA_TERMINO en rango</div>
+    </div>
+  </div>
+  <div class="col-lg-3">
+    <div class="metric">
+      <div class="title">Activos inicio (Ai)</div>
+      <div class="value">{{ Ai }}</div>
+      <div class="sub">al {{ ini.strftime('%d-%m-%Y') }}</div>
+    </div>
+  </div>
+  <div class="col-lg-3">
+    <div class="metric">
+      <div class="title">Activos fin (Af)</div>
+      <div class="value">{{ Af }}</div>
+      <div class="sub">al {{ fin.strftime('%d-%m-%Y') }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== GRÁFICOS ====== -->
+<div class="row g-3 mt-1">
+  <div class="col-12 col-xl-6">
+    <div class="card card-body card-lite h-100">
+      <h6 class="mb-2">Rotación mensual</h6>
+      <canvas id="chartMensual" height="220"></canvas>
+    </div>
+  </div>
+  <div class="col-12 col-xl-6">
+    <div class="card card-body card-lite h-100">
+      <h6 class="mb-2">Rotación por cargo</h6>
+      <canvas id="chartCargo" height="220"></canvas>
+    </div>
+  </div>
+  <div class="col-12">
+    <div class="card card-body card-lite h-100">
+      <h6 class="mb-2">Rotación por cuenta / área</h6>
+      <canvas id="chartCuenta" height="220"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- JS del control de fechas -->
+<script>
+(function(){
+  function toDdMmYyyy(iso){ if(!iso) return ""; const [y,m,d]=iso.split("-"); return (y&&m&&d)? `${d}-${m}-${y}` : ""; }
+  function toIso(ddmmyyyy){ if(!ddmmyyyy) return ""; const v=ddmmyyyy.replace(/[^\d]/g,""); if(v.length!==8) return ""; const d=v.slice(0,2), m=v.slice(2,4), y=v.slice(4); return `${y}-${m}-${d}`; }
+  function mask(el){
+    el.addEventListener("input", e=>{
+      let v=e.target.value.replace(/[^\d]/g,"").slice(0,8);
+      if(v.length>=5) v=v.slice(0,2)+"-"+v.slice(2,4)+"-"+v.slice(4);
+      else if(v.length>=3) v=v.slice(0,2)+"-"+v.slice(2);
+      e.target.value=v;
+      const wrap=el.closest(".gcm-date"); const native=wrap?wrap.querySelector(".gcm-date-native"):null;
+      if(native) native.value=toIso(v);
+    });
+  }
+  document.querySelectorAll(".gcm-date").forEach(wrap=>{
+    const text=wrap.querySelector(".gcm-date-text");
+    const native=wrap.querySelector(".gcm-date-native");
+    const btn=wrap.querySelector(".gcm-date-btn");
+    if(text && native){
+      native.value=toIso(text.value);
+      mask(text);
+      native.addEventListener("change", ()=>{ text.value=toDdMmYyyy(native.value); });
+    }
+    btn && native && btn.addEventListener("click", (e)=>{ e.preventDefault(); if(typeof native.showPicker==="function") native.showPicker(); else native.focus(); });
+  });
+})();
+</script>
+{% endblock %}
+
+{% block scripts_extra %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+<script>
+(function(){
+  // Datos generados en el route
+  const labelsM   = {{ labels_m|tojson }};
+  const activosM  = {{ activos_m|tojson }};   // dotación promedio del mes
+  const desvM     = {{ desv_m|tojson }};
+  const rotM      = {{ rot_m|tojson }};
+
+  const labelsCargo = {{ labels_cargo|tojson }};
+  const desvCargo   = {{ desv_cargo|tojson }};
+  const rotCargo    = {{ rot_cargo|tojson }};
+
+  const labelsCuenta = {{ labels_cuenta|tojson }};
+  const desvCuenta   = {{ desv_cuenta|tojson }};
+  const rotCuenta    = {{ rot_cuenta|tojson }};
+
+  function barLine(ctx, labels, barsA, labelA, barsB, labelB, line, labelLine){
+    return new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: labelA, data: barsA, yAxisID: 'y',  borderWidth:1 },
+          ...(barsB.length ? [{ label: labelB, data: barsB, yAxisID: 'y', borderWidth:1 }] : []),
+          { label: labelLine, data: line, yAxisID: 'y1', type:'line', tension:.3, pointRadius:3 }
+        ]
+      },
+      options: {
+        responsive: true,
+        interaction: { mode:'index', intersect:false },
+        scales: {
+          y:  { beginAtZero: true, title:{display:true, text:'Cantidad'} },
+          y1: { beginAtZero: true, position:'right', title:{display:true, text:'% Rotación'}, ticks:{ callback:v=>v+' %' } }
+        },
+        plugins: {
+          legend: { display:true, position:'top' },
+          tooltip: {
+            callbacks:{
+              label: (ctx)=>{
+                const ds = ctx.dataset;
+                return ds.yAxisID === 'y1' ? `${ds.label}: ${ctx.raw}%` : `${ds.label}: ${ctx.raw}`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Mensual: barras = dotación promedio & desvinculados; línea = % rotación
+  barLine(
+    document.getElementById('chartMensual'),
+    labelsM,
+    activosM, 'Dotación promedio',
+    desvM,    'Desvinculados',
+    rotM,     '% Rotación'
+  );
+
+  // Por cargo: barras = desvinculados; línea = % rotación
+  barLine(
+    document.getElementById('chartCargo'),
+    labelsCargo,
+    desvCargo, 'Desvinculados',
+    [],        '',
+    rotCargo,  '% Rotación'
+  );
+
+  // Por cuenta/área: barras = desvinculados; línea = % rotación
+  barLine(
+    document.getElementById('chartCuenta'),
+    labelsCuenta,
+    desvCuenta, 'Desvinculados',
+    [],         '',
+    rotCuenta,  '% Rotación'
+  );
+})();
+</script>
+{% endblock %}

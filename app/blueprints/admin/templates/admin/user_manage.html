@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+{% block title %}Gestionar usuario · Admin{% endblock %}
+
+{% block head_extra %}
+  <link rel="stylesheet" href="{{ url_for('admin.static', filename='admin.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="gcm-card card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <div>
+      <div class="h4 mb-0">Gestionar usuario</div>
+      <small class="text-muted">Configura rol, estado, cuentas y permisos por recinto.</small>
+    </div>
+    <a class="btn btn-outline-light" href="{{ url_for('admin.users_list') }}">
+      <i class="bi bi-arrow-left"></i> Volver
+    </a>
+  </div>
+
+  <div class="card-body">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="position-relative mb-2">
+          {% for cat, msg in messages %}
+            <div class="alert alert-{{ 'warning' if cat=='message' else cat }} py-2 px-3 mb-2">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- ====================== DATOS BÁSICOS ====================== -->
+    <div class="section-title mb-2">Datos básicos</div>
+    <form class="row g-3" method="post" action="{{ url_for('admin.users_basic_save', uid=user.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="col-lg-4">
+        <label class="form-label">Nombre</label>
+        <input class="form-control" type="text" value="{{ user.name or '' }}" disabled>
+      </div>
+      <div class="col-lg-4">
+        <label class="form-label">Email</label>
+        <input class="form-control" type="email" value="{{ user.email }}" disabled>
+      </div>
+      <div class="col-lg-4">
+        <label class="form-label">Rol</label>
+        <select class="form-select" name="role_id" required>
+          {% for r in roles %}
+            <option value="{{ r.id }}" {% if r.id == user.role_id %}selected{% endif %}>
+              {{ r.name }}{% if r.code %} ({{ r.code }}){% endif %}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" name="is_active" id="sw_active" {% if user.is_active %}checked{% endif %}>
+          <label for="sw_active" class="form-check-label">Usuario activo</label>
+        </div>
+      </div>
+      <div class="col-12 text-end">
+        <button class="btn btn-primary"><i class="bi bi-save"></i> Guardar cambios</button>
+      </div>
+    </form>
+
+    <hr class="my-4">
+
+    <!-- ====================== CUENTAS GLOBALES ====================== -->
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <div class="section-title mb-0">Cuentas globales del usuario</div>
+      <div class="btn-group btn-group-sm" role="group">
+        <button type="button" class="btn btn-outline-light" data-select="#grid-global" data-mode="all">Seleccionar todo</button>
+        <button type="button" class="btn btn-outline-light" data-select="#grid-global" data-mode="none">Deseleccionar</button>
+        <button type="button" class="btn btn-outline-light" data-select="#grid-global" data-mode="invert">Invertir</button>
+      </div>
+    </div>
+    <div class="mb-2">
+      <input class="form-control form-control-sm search-input" type="search" placeholder="Buscar cuenta…" data-search="#grid-global" aria-label="Buscar cuenta global">
+      <div class="form-text">Estas cuentas estarán disponibles para el usuario en todos los recintos donde existan.</div>
+    </div>
+
+    <form method="post" action="{{ url_for('admin.users_cuentas_save', uid=user.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      {% if universo_global|length == 0 %}
+        <div class="alert alert-warning mb-0">No hay cuentas activas en el catálogo.</div>
+      {% else %}
+        <div id="grid-global" class="cuentas-grid">
+          {% set marcadas_globales = cuentas_globales_ids or [] %}
+          {% for c in universo_global %}
+            <label class="form-check-label">
+              <input class="form-check-input me-1" type="checkbox" name="cuentas[]" value="{{ c.id }}"
+                     {% if c.id in marcadas_globales %}checked{% endif %}>
+              <span class="text-muted">{{ c.code }}</span>
+            </label>
+          {% endfor %}
+        </div>
+        <div class="sticky-actions mt-3">
+          <button class="btn btn-success btn-sm"><i class="bi bi-save2"></i> Guardar cuentas globales</button>
+        </div>
+      {% endif %}
+    </form>
+
+    <hr class="my-4">
+
+    <!-- ====================== ASIGNAR RECINTO ====================== -->
+    <div class="section-title">Asignar nuevo recinto</div>
+    <form class="row g-2" method="post" action="{{ url_for('admin.users_recintos_add', uid=user.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="col-lg-6">
+        <label class="form-label">Recinto</label>
+        <select class="form-select" name="recinto_id" required id="recinto-select">
+          <option value="">Selecciona…</option>
+          {% for r in recintos_catalog %}
+            {% set resumen = (r.cuentas_codes or 'Sin cuentas') %}
+            {% set corto = resumen[:80] ~ ('…' if resumen and resumen|length > 80 else '') %}
+            <option value="{{ r.id }}" title="{{ resumen }}" data-cuentas="{{ resumen|e }}">
+              {{ r.name }} ({{ r.code }}) — {{ corto }}
+            </option>
+          {% endfor %}
+        </select>
+        <div id="cuentas-preview" class="form-text mt-1 text-muted"></div>
+      </div>
+      <div class="col-lg-3">
+        <label class="form-label">Nivel</label>
+        <select class="form-select" name="nivel" required>
+          {% for n in [1,2,3] %}
+            <option value="{{ n }}">{{ n }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-lg-3 d-flex align-items-end">
+        <button class="btn btn-outline-light w-100"><i class="bi bi-plus-circle"></i> Asignar recinto</button>
+      </div>
+    </form>
+
+    <hr class="my-4">
+
+    <!-- ====================== RECINTOS & PERMISOS ====================== -->
+    <div class="section-title d-flex align-items-center justify-content-between">
+      <span>Recintos asignados & permisos de cuentas</span>
+      <span class="pill">Usuario: #{{ user.id }}</span>
+    </div>
+
+    {% if not recintos %}
+      <div class="alert alert-info mb-0">Este usuario aún no tiene recintos asignados.</div>
+    {% else %}
+      <div class="accordion" id="recintosAccordion">
+        {% for r in recintos %}
+          {% set universo = universo_cuentas_por_recinto.get(r.id, []) %}
+          {# corregido: usar lista vacía como fallback #}
+          {% set marcadas = cuentas_aut_por_recinto.get(r.id, []) %}
+
+          <div class="accordion-item mb-2">
+            <h2 class="accordion-header" id="hdr-{{ r.id }}">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#col-{{ r.id }}">
+                <div class="d-flex flex-column">
+                  <strong>{{ r.name }}</strong> <small class="text-muted">{{ r.code }}</small>
+                </div>
+                <div class="ms-3">
+                  <span class="badge text-bg-info">Nivel {{ r.nivel }}</span>
+                  {% if not r.is_active %}<span class="badge text-bg-secondary ms-1">Inactivo</span>{% endif %}
+                </div>
+              </button>
+            </h2>
+            <div id="col-{{ r.id }}" class="accordion-collapse collapse" data-bs-parent="#recintosAccordion">
+              <div class="accordion-body">
+
+                <div class="d-flex justify-content-between align-items-center mb-2 toolbar">
+                  <form method="post" action="{{ url_for('admin.users_recintos_remove', uid=user.id, rid=r.id) }}"
+                        onsubmit="return confirm('¿Quitar este recinto del usuario?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Quitar recinto</button>
+                  </form>
+
+                  <div class="ms-auto d-flex gap-2">
+                    <input class="form-control form-control-sm search-input" type="search" placeholder="Buscar cuenta…" data-search="#grid-{{ r.id }}">
+                    <div class="btn-group btn-group-sm" role="group">
+                      <button type="button" class="btn btn-outline-light" data-select="#grid-{{ r.id }}" data-mode="all">Seleccionar todo</button>
+                      <button type="button" class="btn btn-outline-light" data-select="#grid-{{ r.id }}" data-mode="none">Deseleccionar</button>
+                      <button type="button" class="btn btn-outline-light" data-select="#grid-{{ r.id }}" data-mode="invert">Invertir</button>
+                    </div>
+
+                    <form method="post" action="{{ url_for('admin.users_perm_recinto_cuentas_all', uid=user.id, rid=r.id) }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                      <button class="btn btn-success btn-sm">Asignar todas</button>
+                    </form>
+                    <form method="post" action="{{ url_for('admin.users_perm_recinto_cuentas_none', uid=user.id, rid=r.id) }}"
+                          onsubmit="return confirm('¿Desactivar TODAS las cuentas de este recinto?');">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                      <button class="btn btn-outline-danger btn-sm">Quitar todas</button>
+                    </form>
+                  </div>
+                </div>
+
+                <form method="post" action="{{ url_for('admin.users_perm_recinto_cuentas_save', uid=user.id, rid=r.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  {% if universo|length == 0 %}
+                    <div class="alert alert-warning mb-0">Este recinto no tiene cuentas activas asociadas.</div>
+                  {% else %}
+                    <div id="grid-{{ r.id }}" class="cuentas-grid">
+                      {% for c in universo %}
+                        <label class="form-check-label">
+                          <input class="form-check-input me-1" type="checkbox" name="cuentas[]" value="{{ c.id }}"
+                                 {% if marcadas and c.id in marcadas %}checked{% endif %}>
+                          <span class="text-muted">{{ c.code }}</span>
+                        </label>
+                      {% endfor %}
+                    </div>
+                    <div class="sticky-actions mt-3">
+                      <button class="btn btn-primary btn-sm"><i class="bi bi-save"></i> Guardar permisos de este recinto</button>
+                    </div>
+                  {% endif %}
+                </form>
+
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+  // Preview de cuentas en "Asignar nuevo recinto"
+  (function () {
+    const sel = document.getElementById('recinto-select');
+    const out = document.getElementById('cuentas-preview');
+    if (!sel || !out) return;
+    function updatePreview() {
+      const opt = sel.options[sel.selectedIndex];
+      const cuentas = opt ? (opt.dataset.cuentas || '') : '';
+      out.textContent = cuentas ? `Cuentas asociadas: ${cuentas}` : 'Este recinto no tiene cuentas asociadas.';
+    }
+    sel.addEventListener('change', updatePreview);
+    updatePreview();
+  })();
+
+  // Buscador/selección masiva en grids
+  document.querySelectorAll('[data-search]').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase();
+      const grid = document.querySelector(e.target.getAttribute('data-search'));
+      if (!grid) return;
+      grid.querySelectorAll('label').forEach(lbl => {
+        const txt = lbl.textContent.toLowerCase();
+        lbl.style.display = txt.includes(q) ? '' : 'none';
+      });
+    });
+  });
+  document.querySelectorAll('[data-select]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const grid = document.querySelector(btn.getAttribute('data-select'));
+      const mode = btn.getAttribute('data-mode');
+      if (!grid) return;
+      grid.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+        if (mode === 'all') chk.checked = true;
+        if (mode === 'none') chk.checked = false;
+        if (mode === 'invert') chk.checked = !chk.checked;
+      });
+    });
+  });
+</script>
+{% endblock %}

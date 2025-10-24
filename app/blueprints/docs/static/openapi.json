@@ -1,0 +1,1610 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "GCM Ops API",
+    "version": "1.0.0",
+    "description": "APIs internas para presentismo (horas trabajadas/extras, inasistencias), reportes, autenticación y administración de usuarios/desvinculaciones."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Local"
+    },
+    {
+      "url": "https://api.tu-dominio.com",
+      "description": "Producción"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "Inicio de sesión y seguridad"
+    },
+    {
+      "name": "Dashboard",
+      "description": "KPIs y datasets operacionales"
+    },
+    {
+      "name": "Reportes",
+      "description": "Exportaciones XLS/CSV"
+    },
+    {
+      "name": "Desvinculaciones",
+      "description": "Listado, CRUD y carga masiva"
+    },
+    {
+      "name": "Admin",
+      "description": "Usuarios, roles, recintos y cuentas"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "session"
+      }
+    },
+    "schemas": {
+      "PagedMeta": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "example": 1
+          },
+          "per_page": {
+            "type": "integer",
+            "example": 30
+          },
+          "total": {
+            "type": "integer",
+            "example": 1234
+          },
+          "pages": {
+            "type": "integer",
+            "example": 42
+          },
+          "has_prev": {
+            "type": "boolean",
+            "example": false
+          },
+          "has_next": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "HorasTrabajadasItem": {
+        "type": "object",
+        "properties": {
+          "NombreTrabajador": {
+            "type": "string",
+            "example": "Juan Pérez"
+          },
+          "dni": {
+            "type": "string",
+            "example": "12.345.678-9"
+          },
+          "recinto": {
+            "type": "string",
+            "example": "Noviciado"
+          },
+          "DiaTurno": {
+            "type": "string",
+            "example": "22/10/2025"
+          },
+          "entrada": {
+            "type": "string",
+            "example": "22/10/2025 08:00:00"
+          },
+          "salida": {
+            "type": "string",
+            "example": "22/10/2025 17:00:00"
+          },
+          "HorasExtras": {
+            "type": "number",
+            "format": "float",
+            "example": 1.5
+          },
+          "HorasTrabajadas": {
+            "type": "number",
+            "format": "float",
+            "example": 8.0
+          },
+          "HorasTotal": {
+            "type": "number",
+            "format": "float",
+            "example": 9.5
+          },
+          "entradaProgramada": {
+            "type": "string",
+            "example": "22/10/2025 08:00:00"
+          },
+          "SalidaProgramada": {
+            "type": "string",
+            "example": "22/10/2025 17:00:00"
+          },
+          "Cargo": {
+            "type": "string",
+            "example": "Picker"
+          },
+          "tipo_turno": {
+            "type": "string",
+            "example": "Diurno"
+          },
+          "cuenta_area": {
+            "type": "string",
+            "example": "BAT"
+          }
+        }
+      },
+      "InasistenciaItem": {
+        "type": "object",
+        "properties": {
+          "rut": {
+            "type": "string",
+            "example": "12.345.678-9"
+          },
+          "NombreTrabajador": {
+            "type": "string",
+            "example": "Ana Gómez"
+          },
+          "recinto": {
+            "type": "string",
+            "example": "Lampa"
+          },
+          "Cuenta": {
+            "type": "string",
+            "example": "PGC"
+          },
+          "Cargo": {
+            "type": "string",
+            "example": "Operaria"
+          },
+          "FECHA": {
+            "type": "string",
+            "example": "21/10/2025"
+          },
+          "motivo": {
+            "type": "string",
+            "example": "Inasistencia sin aviso"
+          }
+        }
+      },
+      "HorasExtraItem": {
+        "type": "object",
+        "properties": {
+          "NombreTrabajador": {
+            "type": "string",
+            "example": "Carlos Ruiz"
+          },
+          "dni": {
+            "type": "string",
+            "example": "18.765.432-1"
+          },
+          "recinto": {
+            "type": "string",
+            "example": "PGC"
+          },
+          "fecha": {
+            "type": "string",
+            "example": "20/10/2025"
+          },
+          "cargo": {
+            "type": "string",
+            "example": "Supervisor"
+          },
+          "cuenta_area": {
+            "type": "string",
+            "example": "BRF"
+          },
+          "horas_extras": {
+            "type": "number",
+            "format": "float",
+            "example": 2.0
+          }
+        }
+      },
+      "UserSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 6
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "user@empresa.com"
+          },
+          "name": {
+            "type": "string",
+            "example": "María Torres"
+          },
+          "role": {
+            "type": "string",
+            "example": "Supervisor"
+          },
+          "is_active": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "DesvCreate": {
+        "type": "object",
+        "properties": {
+          "dni": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "cuenta_area": {
+            "type": "string"
+          },
+          "recinto": {
+            "type": "string"
+          },
+          "fecha_ingreso": {
+            "type": "string",
+            "example": "2024-05-10"
+          },
+          "fecha_retiro": {
+            "type": "string",
+            "example": "2025-09-30"
+          },
+          "motivo": {
+            "type": "string"
+          },
+          "tipo_contrato": {
+            "type": "string"
+          },
+          "observaciones": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "dni",
+          "nombre",
+          "cuenta_area",
+          "recinto",
+          "fecha_retiro",
+          "motivo"
+        ]
+      }
+    },
+    "parameters": {
+      "Start": {
+        "in": "query",
+        "name": "start",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "example": "2025-10-01"
+        },
+        "description": "Fecha inicio (YYYY-MM-DD)"
+      },
+      "End": {
+        "in": "query",
+        "name": "end",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "example": "2025-10-07"
+        },
+        "description": "Fecha término (YYYY-MM-DD)"
+      },
+      "Page": {
+        "in": "query",
+        "name": "page",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      },
+      "PerPage": {
+        "in": "query",
+        "name": "per_page",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200,
+          "default": 30
+        }
+      }
+    }
+  },
+  "paths": {
+    "/auth/login": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Formulario de login",
+        "responses": {
+          "200": {
+            "description": "HTML del formulario"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Login de usuarios",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password"
+                  },
+                  "remember": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "email",
+                  "password"
+                ]
+              },
+              "example": {
+                "email": "admin@empresa.com",
+                "password": "******",
+                "remember": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "302": {
+            "description": "Redirige a dashboard si credenciales OK"
+          },
+          "200": {
+            "description": "Formulario con error de validación"
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Cerrar sesión",
+        "responses": {
+          "302": {
+            "description": "Redirige a /auth/login"
+          }
+        }
+      }
+    },
+    "/auth/first-password": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Forzar cambio de contraseña (HTML)",
+        "responses": {
+          "200": {
+            "description": "HTML"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Guardar nueva contraseña",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "password1": {
+                    "type": "string",
+                    "minLength": 8
+                  },
+                  "password2": {
+                    "type": "string",
+                    "minLength": 8
+                  }
+                },
+                "required": [
+                  "password1",
+                  "password2"
+                ]
+              },
+              "example": {
+                "password1": "NuevoPassword2025",
+                "password2": "NuevoPassword2025"
+              }
+            }
+          }
+        },
+        "responses": {
+          "302": {
+            "description": "Redirige a dashboard"
+          }
+        }
+      }
+    },
+    "/dashboard": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Tablero principal (HTML)",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML"
+          }
+        }
+      }
+    },
+    "/reporte/horas-trabajadas": {
+      "get": {
+        "tags": [
+          "Reportes"
+        ],
+        "summary": "Página de reporte de horas trabajadas (HTML)",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML"
+          }
+        }
+      }
+    },
+    "/api/horas-trabajadas": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Listado paginado de horas trabajadas",
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Start"
+          },
+          {
+            "$ref": "#/components/parameters/End"
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/PerPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/HorasTrabajadasItem"
+                      }
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "per_page": {
+                      "type": "integer"
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "pages": {
+                      "type": "integer"
+                    },
+                    "has_prev": {
+                      "type": "boolean"
+                    },
+                    "has_next": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Faltan parámetros start/end"
+          }
+        }
+      }
+    },
+    "/reporte/horas-trabajadas/export": {
+      "get": {
+        "tags": [
+          "Reportes"
+        ],
+        "summary": "Exportar horas trabajadas (XLSX o CSV)",
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Start"
+          },
+          {
+            "$ref": "#/components/parameters/End"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Archivo",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {},
+              "text/csv": {}
+            }
+          },
+          "400": {
+            "description": "Faltan parámetros start/end"
+          }
+        }
+      }
+    },
+    "/reporte/inasistencias": {
+      "get": {
+        "tags": [
+          "Reportes"
+        ],
+        "summary": "Página de inasistencias (HTML)",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML"
+          }
+        }
+      }
+    },
+    "/api/inasistencias": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Listado paginado de inasistencias",
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Start"
+          },
+          {
+            "$ref": "#/components/parameters/End"
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/PerPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/InasistenciaItem"
+                      }
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "per_page": {
+                      "type": "integer"
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "pages": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Faltan parámetros start/end"
+          }
+        }
+      }
+    },
+    "/reporte/inasistencias/export": {
+      "get": {
+        "tags": [
+          "Reportes"
+        ],
+        "summary": "Exportar inasistencias (XLSX o CSV)",
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Start"
+          },
+          {
+            "$ref": "#/components/parameters/End"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Archivo",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {},
+              "text/csv": {}
+            }
+          },
+          "400": {
+            "description": "Faltan parámetros start/end"
+          }
+        }
+      }
+    },
+    "/reporte/horas-extras": {
+      "get": {
+        "tags": [
+          "Reportes"
+        ],
+        "summary": "Página de horas extra (HTML)",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML"
+          }
+        }
+      }
+    },
+    "/api/horas-extras": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Listado paginado de horas extra",
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Start"
+          },
+          {
+            "$ref": "#/components/parameters/End"
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/PerPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/HorasExtraItem"
+                      }
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "per_page": {
+                      "type": "integer"
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "pages": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Faltan parámetros start/end"
+          }
+        }
+      }
+    },
+    "/reporte/horas-extras/export": {
+      "get": {
+        "tags": [
+          "Reportes"
+        ],
+        "summary": "Exportar horas extra (XLSX o CSV)",
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Start"
+          },
+          {
+            "$ref": "#/components/parameters/End"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Archivo",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {},
+              "text/csv": {}
+            }
+          },
+          "400": {
+            "description": "Faltan parámetros start/end"
+          }
+        }
+      }
+    },
+    "/desvinculaciones/": {
+      "get": {
+        "tags": [
+          "Desvinculaciones"
+        ],
+        "summary": "Listado (HTML) con filtros y paginación",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "per",
+            "schema": {
+              "type": "integer",
+              "default": 100
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "desde",
+            "schema": {
+              "type": "string",
+              "example": "2025-10-01"
+            }
+          },
+          {
+            "in": "query",
+            "name": "hasta",
+            "schema": {
+              "type": "string",
+              "example": "2025-10-31"
+            }
+          },
+          {
+            "in": "query",
+            "name": "area",
+            "schema": {
+              "type": "string",
+              "example": "BAT"
+            }
+          },
+          {
+            "in": "query",
+            "name": "recinto",
+            "schema": {
+              "type": "string",
+              "example": "Noviciado"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string",
+              "example": "perez"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML"
+          }
+        }
+      }
+    },
+    "/desvinculaciones/export": {
+      "get": {
+        "tags": [
+          "Desvinculaciones"
+        ],
+        "summary": "Exportar desvinculaciones (XLSX/CSV)",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "desde",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "hasta",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "area",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "recinto",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "xlsx",
+                "csv"
+              ],
+              "default": "xlsx"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Archivo XLSX/CSV",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {},
+              "text/csv": {}
+            }
+          }
+        }
+      }
+    },
+    "/desvinculaciones/new": {
+      "get": {
+        "tags": [
+          "Desvinculaciones"
+        ],
+        "summary": "Formulario de creación (HTML)",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Desvinculaciones"
+        ],
+        "summary": "Crear desvinculación",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/DesvCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "302": {
+            "description": "Redirige si OK"
+          },
+          "200": {
+            "description": "HTML con errores"
+          }
+        }
+      }
+    },
+    "/desvinculaciones/{id}/edit": {
+      "get": {
+        "tags": [
+          "Desvinculaciones"
+        ],
+        "summary": "Formulario de edición (HTML)",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML"
+          },
+          "404": {
+            "description": "No encontrado"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Desvinculaciones"
+        ],
+        "summary": "Actualizar desvinculación",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/DesvCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "302": {
+            "description": "Redirige si OK"
+          },
+          "200": {
+            "description": "HTML con errores"
+          },
+          "404": {
+            "description": "No encontrado"
+          }
+        }
+      }
+    },
+    "/desvinculaciones/{id}/delete": {
+      "post": {
+        "tags": [
+          "Desvinculaciones"
+        ],
+        "summary": "Eliminar desvinculación",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirige al listado"
+          },
+          "404": {
+            "description": "No encontrado"
+          }
+        }
+      }
+    },
+    "/desvinculaciones/cargar": {
+      "get": {
+        "tags": [
+          "Desvinculaciones"
+        ],
+        "summary": "Pantalla de carga/gestión (HTML)",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML"
+          }
+        }
+      }
+    },
+    "/desvinculaciones/carga-masiva": {
+      "get": {
+        "tags": [
+          "Desvinculaciones"
+        ],
+        "summary": "Formulario de carga masiva (HTML)",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Desvinculaciones"
+        ],
+        "summary": "Procesar carga masiva (CSV)",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resultado (HTML/flash)"
+          },
+          "400": {
+            "description": "Archivo inválido"
+          }
+        }
+      }
+    },
+    "/desvinculaciones/carga-masiva/plantilla": {
+      "get": {
+        "tags": [
+          "Desvinculaciones"
+        ],
+        "summary": "Descargar plantilla CSV",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Archivo CSV",
+            "content": {
+              "text/csv": {}
+            }
+          }
+        }
+      }
+    },
+    "/admin/users": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Lista de usuarios (HTML, solo SuperAdmin)",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Buscar por nombre/correo"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML"
+          },
+          "403": {
+            "description": "No autorizado"
+          }
+        }
+      }
+    },
+    "/admin/users/new": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Formulario crear usuario (HTML)",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Crear usuario",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "role_id": {
+                    "type": "integer"
+                  },
+                  "is_active": {
+                    "type": "string",
+                    "description": "on/off"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email",
+                  "role_id"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "302": {
+            "description": "Redirige a gestionar si OK"
+          },
+          "200": {
+            "description": "HTML con errores"
+          }
+        }
+      }
+    },
+    "/admin/users/{uid}/manage": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Pantalla única de gestión de usuario (HTML)",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uid",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML"
+          },
+          "404": {
+            "description": "Usuario no existe"
+          }
+        }
+      }
+    },
+    "/admin/users/{uid}/basic": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Guardar datos básicos",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uid",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "role_id": {
+                    "type": "integer"
+                  },
+                  "is_active": {
+                    "type": "string",
+                    "description": "on/off"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "302": {
+            "description": "Redirige a gestionar"
+          }
+        }
+      }
+    },
+    "/admin/users/{uid}/cuentas/save": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Actualizar cuentas globales del usuario",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uid",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cuentas[]": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "302": {
+            "description": "Redirige a gestionar"
+          }
+        }
+      }
+    },
+    "/admin/users/{uid}/recintos/add": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Asignar recinto a usuario",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uid",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "recinto_id": {
+                    "type": "integer"
+                  },
+                  "nivel": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "recinto_id"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "302": {
+            "description": "Redirige a gestionar"
+          }
+        }
+      }
+    },
+    "/admin/users/{uid}/recintos/{rid}/remove": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Quitar recinto al usuario",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uid",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "rid",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirige a gestionar"
+          }
+        }
+      }
+    },
+    "/admin/users/{uid}/perm/recintos/{rid}/cuentas": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Guardar permisos por cuentas dentro del recinto",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uid",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "rid",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cuentas[]": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "302": {
+            "description": "Redirige a gestionar"
+          }
+        }
+      }
+    },
+    "/admin/users/{uid}": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "(Legado) Redirección a gestionar",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uid",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirige a /admin/users/{uid}/manage"
+          }
+        }
+      }
+    }
+  }
+}
