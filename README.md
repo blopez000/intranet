@@ -15,7 +15,7 @@ Intranet es una aplicación que permite visualizar información bajada desde la 
 ---
 
 ## Estructura de carpetas
-intranet/
+proyectoo/
 ├── app/
 │ ├── blueprints/
 │ │ ├── admin/
@@ -37,7 +37,6 @@ intranet/
 └── README.md
 
 yaml
-Copiar código
 
 > Nota: Algunos directorios incluyen subcarpetas para rutas, templates y archivos estáticos de cada módulo.
 
